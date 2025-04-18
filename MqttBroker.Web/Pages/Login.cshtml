@@ -1,0 +1,25 @@
+﻿@page
+@model MqttBroker.Web.Pages.LoginModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+</head>
+<body>
+    <h2>Login</h2>
+    <form method="post">
+        <label>Username:</label>
+        <input name="Username" />
+        <br />
+        <label>Password:</label>
+        <input type="password" name="Password" />
+        <br />
+        <button type="submit">Login</button>
+        <p style="color:red">@Model.ErrorMessage</p>
+    </form>
+</body>
+</html>
