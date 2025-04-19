@@ -39,7 +39,9 @@ namespace MqttBroker.Web.Pages
                 return Page();
             }
 
-            // You can store session info here if you want
+            // ? Store the username in session so other pages can use it
+            HttpContext.Session.SetString("Username", user.Username);
+
             if (user.Role == "admin")
                 return RedirectToPage("/AdminDashboard");
             else

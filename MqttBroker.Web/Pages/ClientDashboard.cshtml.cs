@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MqttBroker.Database;
@@ -37,8 +38,50 @@ namespace MqttBroker.Web.Pages
                 SubscribedTopics = client.Subscriptions.Select(s => s.Topic).ToList();
             }
 
-            // Pull all available topics from Neo4j
             AvailableTopics = await _metadataService.GetAllTopicsAsync();
+        }
+
+        public async Task<IActionResult> OnPostAsync(string Action, string TopicName)
+        {
+            Username = HttpContext.Session.GetString("Username");
+
+            Console.WriteLine($"[POST] Username from session: {Username}");
+            Console.WriteLine($"[POST] Action: {Action}, Topic: {TopicName}");
+
+            if (string.IsNullOrEmpty(Action) || string.IsNullOrEmpty(TopicName) || string.IsNullOrEmpty(Username))
+                return RedirectToPage();
+
+            var client = _context.Clients
+                .Include(c => c.Subscriptions)
+                .FirstOrDefault(c => c.Username == Username);
+
+            if (client == null)
+                return RedirectToPage();
+
+            if (Action == "subscribe")
+            {
+                if (!client.Subscriptions.Any(s => s.Topic == TopicName))
+                {
+                    client.Subscriptions.Add(new Subscription
+                    {
+                        Topic = TopicName,
+                        ClientId = client.Id
+                    });
+
+                    await _context.SaveChangesAsync();
+                }
+            }
+            else if (Action == "unsubscribe")
+            {
+                var sub = client.Subscriptions.FirstOrDefault(s => s.Topic == TopicName);
+                if (sub != null)
+                {
+                    _context.Subscriptions.Remove(sub);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            return RedirectToPage();
         }
     }
 }

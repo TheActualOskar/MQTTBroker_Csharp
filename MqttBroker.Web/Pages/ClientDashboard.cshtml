@@ -27,22 +27,21 @@ else
 
 <input type="text" id="topicSearch" placeholder="Search topics..." onkeyup="filterTopics()" />
 
-<form method="post">
-    <div id="topicList" class="topic-list">
-        @foreach (var topic in Model.AvailableTopics)
-        {
-            <div class="topic-card">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <a asp-page="/ViewTopic" asp-route-topic="@topic">@topic</a>
-                    <div>
-                        <button type="submit" name="Action" value="subscribe:@topic">Subscribe</button>
-                        <button type="submit" name="Action" value="unsubscribe:@topic">Unsubscribe</button>
-                    </div>
-                </div>
+<div id="topicList" class="topic-list">
+    @foreach (var topic in Model.AvailableTopics)
+    {
+        <div class="topic-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <a asp-page="/ViewTopic" asp-route-topic="@topic">@topic</a>
+                <form method="post" style="display: inline;">
+                    <input type="hidden" name="TopicName" value="@topic" />
+                    <button type="submit" name="Action" value="subscribe">Subscribe</button>
+                    <button type="submit" name="Action" value="unsubscribe">Unsubscribe</button>
+                </form>
             </div>
-        }
-    </div>
-</form>
+        </div>
+    }
+</div>
 
 <style>
     input#topicSearch {
