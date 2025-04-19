@@ -3,7 +3,25 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35931.197 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MqttBroker", "MqttBroker\MqttBroker.csproj", "{041FB15E-8B5C-E0D3-118E-C534C3713BFE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MqttBroker.Web", "MqttBroker.Web\MqttBroker.Web.csproj", "{47E8FE23-BBCF-1805-1038-6E88345E775F}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{041FB15E-8B5C-E0D3-118E-C534C3713BFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{041FB15E-8B5C-E0D3-118E-C534C3713BFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{041FB15E-8B5C-E0D3-118E-C534C3713BFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{041FB15E-8B5C-E0D3-118E-C534C3713BFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{47E8FE23-BBCF-1805-1038-6E88345E775F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{47E8FE23-BBCF-1805-1038-6E88345E775F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{47E8FE23-BBCF-1805-1038-6E88345E775F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{47E8FE23-BBCF-1805-1038-6E88345E775F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
