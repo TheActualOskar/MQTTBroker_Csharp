@@ -12,6 +12,17 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddSession();
+
+
+//graph database -> my topics
+var config = builder.Configuration.GetSection("Neo4j");
+builder.Services.AddSingleton(new MqttBroker.Web.Services.MetadataService(
+    config["Uri"],
+    config["Username"],
+    config["Password"]
+));
+
+//client database -> users and subscriptions
 builder.Services.AddDbContext<BrokerDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 

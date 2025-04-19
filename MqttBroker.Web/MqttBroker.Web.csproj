@@ -10,4 +10,8 @@
     <ProjectReference Include="..\MqttBroker\MqttBroker.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Neo4j.Driver" Version="5.27.0" />
+  </ItemGroup>
+
 </Project>

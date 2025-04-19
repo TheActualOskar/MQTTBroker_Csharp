@@ -1,4 +1,39 @@
 ﻿@page
 @model MqttBroker.Web.Pages.ClientDashboardModel
+@{
+    ViewData["Title"] = "Client Dashboard";
+}
 
-<h2>Welcome, @Model.Username (Client)</h2>
+<h2>Welcome, @Model.Username 👋</h2>
+
+@if (Model.SubscribedTopics.Any())
+{
+    <h4>Your Subscriptions:</h4>
+    <ul>
+        @foreach (var topic in Model.SubscribedTopics)
+        {
+            <li>@topic</li>
+        }
+    </ul>
+}
+else
+{
+    <p>You are not subscribed to any topics yet.</p>
+}
+
+<hr />
+
+@if (Model.AvailableTopics.Any())
+{
+    <h4>Available Topics (from Neo4j):</h4>
+    <ul>
+        @foreach (var topic in Model.AvailableTopics)
+        {
+            <li>@topic</li>
+        }
+    </ul>
+}
+else
+{
+    <p>No available topics found in metadata.</p>
+}
