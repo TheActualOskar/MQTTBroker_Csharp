@@ -58,5 +58,26 @@ using (var scope = app.Services.CreateScope())
 
         db.SaveChanges();
     }
+
+    if (!db.Clients.Any(c => c.Username == "test-client"))
+    {
+        using var sha256 = SHA256.Create();
+        var hashedPassword = Convert.ToBase64String(
+            sha256.ComputeHash(Encoding.UTF8.GetBytes("client123")));
+
+        db.Clients.Add(new Client
+        {
+            ClientId = Guid.NewGuid().ToString(),
+            Username = "test-client",
+            PasswordHash = hashedPassword,
+            Role = "client"
+        });
+        db.SaveChanges();
+
+    }
 }
+
+
+
+
 app.Run();
