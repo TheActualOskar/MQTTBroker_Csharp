@@ -7,9 +7,14 @@ namespace MqttBroker.Web.Pages
     {
         public string Username { get; set; }
 
-        public void OnGet()
+        public IActionResult OnGet()
         {
             Username = HttpContext.Session.GetString("Username");
+
+            if (string.IsNullOrEmpty(Username))
+                return RedirectToPage("/Login");
+
+            return Page();
         }
     }
 }

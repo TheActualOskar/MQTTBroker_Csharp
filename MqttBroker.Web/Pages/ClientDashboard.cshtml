@@ -1,5 +1,8 @@
 ﻿@page
 @model MqttBroker.Web.Pages.ClientDashboardModel
 @{
-    <a href="/Logout">Logout</a>
+    Layout = null;
 }
+<h2>Client Dashboard</h2>
+<p>Welcome, @Model.Username 👋</p>
+<a href="/Logout">Logout</a>

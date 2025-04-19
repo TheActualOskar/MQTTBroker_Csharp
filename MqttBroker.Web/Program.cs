@@ -3,6 +3,7 @@ using System.Text;
 using MqttBroker.Database;
 using MqttBroker.Models;
 
+
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+builder.Services.AddSession();
 builder.Services.AddDbContext<BrokerDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -28,11 +30,13 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseSession();
+
 app.UseAuthorization();
 
 app.MapRazorPages();
 
-app.Run();
+
 
 using (var scope = app.Services.CreateScope())
 {
@@ -55,3 +59,4 @@ using (var scope = app.Services.CreateScope())
         db.SaveChanges();
     }
 }
+app.Run();
