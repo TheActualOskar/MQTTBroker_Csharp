@@ -6,36 +6,20 @@
 
 <h2>Welcome</h2>
 
-@if (Model.SubscribedTopics.Any())
-{
-    <p>You are subscribed to:</p>
-    <ul>
-        @foreach (var topic in Model.SubscribedTopics)
-        {
-            <li>@topic</li>
-        }
-    </ul>
-}
-else
-{
-    <p>You are not subscribed to any topics yet.</p>
-}
 
-<hr />
 
-<h3>Available Topics (from Neo4j):</h3>
+<h3>Your Subscriptions:</h3>
+<input type="text" id="subscribedSearch" placeholder="Search subscribed topics..." onkeyup="filterSubscribed()" />
 
-<input type="text" id="topicSearch" placeholder="Search topics..." onkeyup="filterTopics()" />
 
-<div id="topicList" class="topic-list">
-    @foreach (var topic in Model.AvailableTopics)
+<div id="subscribedList" class="topic-list">
+    @foreach (var topic in Model.SubscribedTopics)
     {
         <div class="topic-card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <a asp-page="/ViewTopic" asp-route-topic="@topic">@topic</a>
                 <form method="post" style="display: inline;">
                     <input type="hidden" name="TopicName" value="@topic" />
-                    <button type="submit" name="Action" value="subscribe">Subscribe</button>
                     <button type="submit" name="Action" value="unsubscribe">Unsubscribe</button>
                 </form>
             </div>
@@ -43,7 +27,34 @@ else
     }
 </div>
 
+<hr />
+
+<h3>Available Topics (from Neo4j):</h3>
+<input type="text" id="topicSearch" placeholder="Search available topics..." onkeyup="filterAvailable()" />
+
+<div id="topicList" class="topic-list">
+    @foreach (var topic in Model.AvailableTopics.Except(Model.SubscribedTopics))
+    {
+        <div class="topic-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <a asp-page="/ViewTopic" asp-route-topic="@topic">@topic</a>
+                <form method="post" style="display: inline;">
+                    <input type="hidden" name="TopicName" value="@topic" />
+                    <button type="submit" name="Action" value="subscribe">Subscribe</button>
+                </form>
+            </div>
+        </div>
+    }
+</div>
+
 <style>
+    input#subscribedSearch {
+        padding: 10px;
+        margin-bottom: 15px;
+        width: 100%;
+        max-width: 400px;
+        font-size: 1rem;
+    }
     input#topicSearch {
         padding: 10px;
         margin-bottom: 15px;
@@ -89,15 +100,26 @@ else
             cursor: pointer;
         }
 
+
             .topic-card button:hover {
                 background-color: #0056b3;
             }
 </style>
 
 <script>
-    function filterTopics() {
+    function filterAvailable() {
         const input = document.getElementById("topicSearch").value.toLowerCase();
-        const cards = document.querySelectorAll(".topic-card");
+        const cards = document.querySelectorAll("#topicList .topic-card");
+
+        cards.forEach(card => {
+            const topicText = card.textContent.toLowerCase();
+            card.style.display = topicText.includes(input) ? "block" : "none";
+        });
+    }
+
+    function filterSubscribed() {
+        const input = document.getElementById("subscribedSearch").value.toLowerCase();
+        const cards = document.querySelectorAll("#subscribedList .topic-card");
 
         cards.forEach(card => {
             const topicText = card.textContent.toLowerCase();
