@@ -1,47 +1,50 @@
 ﻿@page
 @model MqttBroker.Web.Pages.ViewTopicModel
 @{
-    ViewData["Title"] = "View Topic";
-    Layout = "~/Pages/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Live Topic Viewer";
 }
 
-<h2>📡 Viewing Topic: @Model.Topic</h2>
+<h2>Live View: @Model.Topic</h2>
 
-<div class="message-feed">
-    @foreach (var message in Model.Messages)
-    {
-        <div class="message-box">
-            <span class="timestamp">@DateTime.Now.ToShortTimeString()</span>
-            <div class="message-content">@message</div>
-        </div>
-    }
+<div id="messages" class="message-box">
+    <p><i>Waiting for messages...</i></p>
 </div>
 
 <style>
-    .message-feed {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        margin-top: 20px;
-    }
-
     .message-box {
-        background-color: #f4f4f4;
-        padding: 12px 16px;
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        border-left: 4px solid #007bff;
-        max-width: 600px;
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #f5f5f5;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: monospace;
     }
 
-    .message-content {
-        font-size: 1rem;
-        color: #333;
-    }
-
-    .timestamp {
-        font-size: 0.75rem;
-        color: gray;
-        float: right;
-    }
+        .message-box p {
+            margin: 5px 0;
+        }
 </style>
+
+<script>
+    const topic = "@Model.Topic";
+    const socket = new WebSocket("ws://localhost:9001");
+
+    socket.onopen = () => {
+        console.log("🔗 WebSocket connected");
+        socket.send(topic); // Tell the broker which topic to subscribe to
+    };
+
+    socket.onmessage = (event) => {
+        const msgBox = document.getElementById("messages");
+        const p = document.createElement("p");
+        p.textContent = "📨 " + event.data;
+        msgBox.appendChild(p);
+        msgBox.scrollTop = msgBox.scrollHeight; // Auto-scroll
+    };
+
+    socket.onclose = () => {
+        console.warn("❌ WebSocket closed");
+    };
+</script>

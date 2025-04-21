@@ -11,6 +11,7 @@
     <PackageReference Include="Akka" Version="1.5.40" />
     <PackageReference Include="Akka.DependencyInjection" Version="1.5.40" />
     <PackageReference Include="Akka.Remote" Version="1.5.40" />
+    <PackageReference Include="Fleck" Version="1.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.4">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

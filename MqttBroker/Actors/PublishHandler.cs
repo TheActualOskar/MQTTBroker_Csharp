@@ -8,32 +8,27 @@ namespace MqttBroker.Actors
     public class PublishHandler : ReceiveActor
     {
         private readonly IActorRef _messageRouter;
+        private readonly IActorRef _webSocketServer;
 
-        public PublishHandler()
-        {
-            // Normally this would be injected; for now, create it directly:
-            //_messageRouter = Context.ActorOf(Props.Create(() => new MessageRouter()), "MessageRouter");
-
-            Receive<MqttRawPacket>(packet =>
-            {
-                var (topic, payload) = ParsePublishPacket(packet.RawBytes);
-
-                Console.WriteLine($"📦 Received publish for topic: '{topic}' | Payload: {Encoding.UTF8.GetString(payload)}");
-
-                _messageRouter.Tell(new PublishMessage(topic, payload));
-            });
-        }
-              public PublishHandler(IActorRef messageRouter)
+        public PublishHandler(IActorRef messageRouter, IActorRef webSocketServer)
         {
             _messageRouter = messageRouter;
+            _webSocketServer = webSocketServer;
 
             Receive<MqttRawPacket>(packet =>
             {
                 var (topic, payload) = ParsePublishPacket(packet.RawBytes);
-                Console.WriteLine($"📦 Received publish for topic: '{topic}' | Payload: {Encoding.UTF8.GetString(payload)}");
+                var payloadText = Encoding.UTF8.GetString(payload);
+
+                Console.WriteLine($"📦 Received publish for topic: '{topic}' | Payload: {payloadText}");
+
+                // Push to message router (TCP clients)
                 _messageRouter.Tell(new PublishMessage(topic, payload));
+
+                // Push to WebSocket clients (browser)
+                _webSocketServer.Tell(new PublishToWebSocket(topic, payloadText));
             });
-        }  
+        }
 
         private (string topic, byte[] payload) ParsePublishPacket(byte[] raw)
         {

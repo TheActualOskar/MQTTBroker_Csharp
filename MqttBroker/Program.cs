@@ -17,8 +17,9 @@ class Program
 
         var dbContext = new BrokerDbContext(optionsBuilder.Options);
 
+        var webSocketServer = system.ActorOf(WebSocketServerActor.Props(), "WebSocketServer");
         var messageRouter = system.ActorOf(Props.Create(() => new MessageRouter()), "MessageRouter");
-        var publishHandler = system.ActorOf(Props.Create(() => new PublishHandler(messageRouter)), "PublishHandler");
+        var publishHandler = system.ActorOf(Props.Create(() => new PublishHandler(messageRouter, webSocketServer)), "PublishHandler");
         var subscribeHandler = system.ActorOf(Props.Create(() => new SubscribeHandler(dbContext)), "SubscribeHandler");
 
         var connectHandler = system.ActorOf(Props.Create(() => new ConnectHandler()), "ConnectHandler");
@@ -26,6 +27,10 @@ class Program
         var packageListener = system.ActorOf(
             PackageListener.Props(connectHandler, publishHandler, subscribeHandler),
             "PackageListener");
+
+
+
+
 
         // 🔄 Keeps the app running forever
         await Task.Delay(-1);

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 
 namespace MqttBroker.Actors
 {
@@ -30,8 +31,11 @@ namespace MqttBroker.Actors
                     Console.WriteLine($"  - {topic}");
                 }
 
-                // 🔄 Save to PostgreSQL
-                var client = _dbContext.Clients.FirstOrDefault(c => c.ClientId == clientId);
+                // 🔄 Save to PostgreSQL (Include Subscriptions to avoid null)
+                var client = _dbContext.Clients
+                    .Include(c => c.Subscriptions)
+                    .FirstOrDefault(c => c.ClientId == clientId);
+
                 if (client == null)
                 {
                     client = new Client
