@@ -44,6 +44,8 @@ namespace MqttBroker.Web.Pages
         public async Task<IActionResult> OnPostAsync(string Action, string TopicName)
         {
             Username = HttpContext.Session.GetString("Username");
+            if (string.IsNullOrEmpty(Username))
+                return RedirectToPage("/Login");
 
             Console.WriteLine($"[POST] Username from session: {Username}");
             Console.WriteLine($"[POST] Action: {Action}, Topic: {TopicName}");

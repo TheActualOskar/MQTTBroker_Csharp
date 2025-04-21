@@ -36,6 +36,37 @@ namespace MqttBroker.Web.Services
 
             return topics;
         }
+        public async Task CreateDatastreamAsync(string deviceId, string streamId, string unit, string frequency, string topicName)
+        {
+            var session = _driver.AsyncSession();
+
+            try
+            {
+                await session.WriteTransactionAsync(async tx =>
+                {
+                    await tx.RunAsync(@"
+                MERGE (d:Device {id: $deviceId})
+                MERGE (s:Datastream {id: $streamId})
+                SET s.unit = $unit, s.frequency = $frequency
+                MERGE (t:Topic {name: $topicName})
+                MERGE (d)-[:PROVIDES]->(s)
+                MERGE (s)-[:PUBLISHED_AS]->(t)
+            ",
+                    new
+                    {
+                        deviceId,
+                        streamId,
+                        unit,
+                        frequency,
+                        topicName
+                    });
+                });
+            }
+            finally
+            {
+                await session.CloseAsync();
+            }
+        }
 
         public async ValueTask DisposeAsync()
         {
