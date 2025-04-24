@@ -1,7 +1,11 @@
 ﻿using Akka.Actor;
+using Akka.Configuration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using MqttBroker.Actors;
 using MqttBroker.Database;
+using Microsoft.Extensions.Configuration;
+
 
 class Program
 {
@@ -16,6 +20,14 @@ class Program
         optionsBuilder.UseNpgsql(connectionString);
 
         var dbContext = new BrokerDbContext(optionsBuilder.Options);
+
+        var config = new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json")
+        .Build();
+
+        var eventNotifier = system.ActorOf(EventNotifier.Props(dbContext, config), "EventNotifier");
+
+
 
         var webSocketServer = system.ActorOf(WebSocketServerActor.Props(), "WebSocketServer");
         var messageRouter = system.ActorOf(Props.Create(() => new MessageRouter()), "MessageRouter");
@@ -32,7 +44,7 @@ class Program
 
 
 
-        // 🔄 Keeps the app running forever
+        //Keeps the app running forever
         await Task.Delay(-1);
     }
 }

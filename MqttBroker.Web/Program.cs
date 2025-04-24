@@ -5,6 +5,8 @@ using MqttBroker.Models;
 
 
 using Microsoft.EntityFrameworkCore;
+using Akka.Actor;
+using MqttBroker.Actors;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +27,24 @@ builder.Services.AddSingleton(new MqttBroker.Web.Services.MetadataService(
 //client database -> users and subscriptions
 builder.Services.AddDbContext<BrokerDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
+builder.Services.AddSingleton<IActorRef>(provider =>
+{
+    var system = ActorSystem.Create("MqttBrokerWebSystem");
+
+    var dbOptions = new DbContextOptionsBuilder<BrokerDbContext>()
+        .UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+        .Options;
+
+    var dbContext = new BrokerDbContext(dbOptions);
+    var config = builder.Configuration; // ? Get IConfiguration
+
+    return system.ActorOf(EventNotifier.Props(dbContext, config), "EventNotifierWeb");
+});
+
+
+
 
 var app = builder.Build();
 
@@ -87,6 +107,7 @@ using (var scope = app.Services.CreateScope())
 
     }
 }
+
 
 
 
