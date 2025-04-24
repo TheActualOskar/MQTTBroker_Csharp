@@ -31,6 +31,10 @@
                     <button type="submit" class="btn btn-primary">Login</button>
                 </div>
 
+                <div class="text-center mt-3">
+                    <a href="/Register">Don't have an account? Register here</a>
+                </div>
+
                 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
                 {
                     <div class="alert alert-danger mt-3" role="alert">
@@ -38,6 +42,7 @@
                     </div>
                 }
             </form>
+
         </div>
     </div>
 </body>
