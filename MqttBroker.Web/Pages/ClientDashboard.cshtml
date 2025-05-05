@@ -6,11 +6,8 @@
 
 <h2>Welcome</h2>
 
-
-
 <h3>Your Subscriptions:</h3>
 <input type="text" id="subscribedSearch" placeholder="Search subscribed topics..." onkeyup="filterSubscribed()" />
-
 
 <div id="subscribedList" class="topic-list">
     @foreach (var topic in Model.SubscribedTopics)
@@ -23,6 +20,34 @@
                     <button type="submit" name="Action" value="unsubscribe">Unsubscribe</button>
                 </form>
             </div>
+        </div>
+    }
+</div>
+
+<h3>Your SmartFilters:</h3>
+<div class="flex items-center justify-between mb-4 space-x-4">
+    <input type="text" id="smartfilterSearch"
+           placeholder="Search smart filters..."
+           onkeyup="filterSmartFilters()"
+           class="form-input w-full max-w-md" />
+
+    <a asp-page="/CreateTopic" class="btn btn-primary whitespace-nowrap">
+        Create New SmartFilter
+    </a>
+</div>
+
+<div id="smartfilterList" class="topic-list">
+    @foreach (var smartFilter in Model.SubscribedSmartFilters)
+    {
+        <div class="topic-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>@smartFilter.Name</span>
+                <form method="post" style="display: inline;">
+                    <input type="hidden" name="SmartFilterId" value="@smartFilter.Id" />
+                    <button type="submit" name="Action" value="unsubscribeSmartFilter">Unsubscribe</button>
+                </form>
+            </div>
+            <div class="text-sm text-gray-600">@smartFilter.Description</div>
         </div>
     }
 </div>
@@ -48,13 +73,8 @@
 </div>
 
 <style>
-    input#subscribedSearch {
-        padding: 10px;
-        margin-bottom: 15px;
-        width: 100%;
-        max-width: 400px;
-        font-size: 1rem;
-    }
+    input#subscribedSearch,
+    input#smartfilterSearch,
     input#topicSearch {
         padding: 10px;
         margin-bottom: 15px;
@@ -100,7 +120,6 @@
             cursor: pointer;
         }
 
-
             .topic-card button:hover {
                 background-color: #0056b3;
             }
@@ -120,6 +139,16 @@
     function filterSubscribed() {
         const input = document.getElementById("subscribedSearch").value.toLowerCase();
         const cards = document.querySelectorAll("#subscribedList .topic-card");
+
+        cards.forEach(card => {
+            const topicText = card.textContent.toLowerCase();
+            card.style.display = topicText.includes(input) ? "block" : "none";
+        });
+    }
+
+    function filterSmartFilters() {
+        const input = document.getElementById("smartfilterSearch").value.toLowerCase();
+        const cards = document.querySelectorAll("#smartfilterList .topic-card");
 
         cards.forEach(card => {
             const topicText = card.textContent.toLowerCase();

@@ -18,5 +18,7 @@ namespace MqttBroker.Models
             public string Role { get; set; }  // e.g., "admin" or "client"
 
             public ICollection<Subscription> Subscriptions { get; set; }
+
+            public ICollection<ClientNamedSubscription> ClientNamedSubscriptions { get; set; }
     }
 }

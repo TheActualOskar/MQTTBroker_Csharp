@@ -7,6 +7,7 @@ using MqttBroker.Models;
 using Microsoft.EntityFrameworkCore;
 using Akka.Actor;
 using MqttBroker.Actors;
+using Neo4j.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,9 +25,25 @@ builder.Services.AddSingleton(new MqttBroker.Web.Services.MetadataService(
     config["Password"]
 ));
 
+builder.Services.AddSingleton<Neo4j.Driver.IDriver>(provider =>
+    GraphDatabase.Driver(
+        config["Uri"],
+        AuthTokens.Basic(config["Username"], config["Password"])
+    )
+);
+
+
+
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<MqttBroker.Web.Services.SubscriptionService>();
+
+
 //client database -> users and subscriptions
 builder.Services.AddDbContext<BrokerDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
 
 
 builder.Services.AddSingleton<IActorRef>(provider =>

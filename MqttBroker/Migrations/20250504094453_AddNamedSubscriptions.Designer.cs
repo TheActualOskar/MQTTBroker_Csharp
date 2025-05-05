@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MqttBroker.Database;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MqttBroker.Migrations
 {
     [DbContext(typeof(BrokerDbContext))]
-    partial class BrokerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250504094453_AddNamedSubscriptions")]
+    partial class AddNamedSubscriptions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,6 +24,29 @@ namespace MqttBroker.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("ClientNamedSubscription", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClientId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NamedSubscriptionId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("NamedSubscriptionId");
+
+                    b.ToTable("ClientNamedSubscriptions");
+                });
 
             modelBuilder.Entity("MqttBroker.Models.Client", b =>
                 {
@@ -55,7 +81,7 @@ namespace MqttBroker.Migrations
                     b.ToTable("Clients");
                 });
 
-            modelBuilder.Entity("MqttBroker.Models.ClientNamedSubscription", b =>
+            modelBuilder.Entity("MqttBroker.Models.Subscription", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -66,19 +92,18 @@ namespace MqttBroker.Migrations
                     b.Property<int>("ClientId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("NamedSubscriptionId")
-                        .HasColumnType("integer");
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
 
-                    b.HasIndex("NamedSubscriptionId");
-
-                    b.ToTable("ClientNamedSubscriptions");
+                    b.ToTable("Subscriptions");
                 });
 
-            modelBuilder.Entity("MqttBroker.Models.NamedSubscription", b =>
+            modelBuilder.Entity("NamedSubscription", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -114,6 +139,10 @@ namespace MqttBroker.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ReturnFields")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByClientId");
@@ -121,37 +150,15 @@ namespace MqttBroker.Migrations
                     b.ToTable("NamedSubscriptions");
                 });
 
-            modelBuilder.Entity("MqttBroker.Models.Subscription", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ClientId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Topic")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClientId");
-
-                    b.ToTable("Subscriptions");
-                });
-
-            modelBuilder.Entity("MqttBroker.Models.ClientNamedSubscription", b =>
+            modelBuilder.Entity("ClientNamedSubscription", b =>
                 {
                     b.HasOne("MqttBroker.Models.Client", "Client")
-                        .WithMany("ClientNamedSubscriptions")
+                        .WithMany()
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MqttBroker.Models.NamedSubscription", "NamedSubscription")
+                    b.HasOne("NamedSubscription", "NamedSubscription")
                         .WithMany("SubscribedClients")
                         .HasForeignKey("NamedSubscriptionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -160,17 +167,6 @@ namespace MqttBroker.Migrations
                     b.Navigation("Client");
 
                     b.Navigation("NamedSubscription");
-                });
-
-            modelBuilder.Entity("MqttBroker.Models.NamedSubscription", b =>
-                {
-                    b.HasOne("MqttBroker.Models.Client", "CreatedByClient")
-                        .WithMany()
-                        .HasForeignKey("CreatedByClientId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CreatedByClient");
                 });
 
             modelBuilder.Entity("MqttBroker.Models.Subscription", b =>
@@ -184,14 +180,23 @@ namespace MqttBroker.Migrations
                     b.Navigation("Client");
                 });
 
+            modelBuilder.Entity("NamedSubscription", b =>
+                {
+                    b.HasOne("MqttBroker.Models.Client", "CreatedByClient")
+                        .WithMany()
+                        .HasForeignKey("CreatedByClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByClient");
+                });
+
             modelBuilder.Entity("MqttBroker.Models.Client", b =>
                 {
-                    b.Navigation("ClientNamedSubscriptions");
-
                     b.Navigation("Subscriptions");
                 });
 
-            modelBuilder.Entity("MqttBroker.Models.NamedSubscription", b =>
+            modelBuilder.Entity("NamedSubscription", b =>
                 {
                     b.Navigation("SubscribedClients");
                 });

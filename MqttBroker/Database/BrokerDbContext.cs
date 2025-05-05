@@ -8,6 +8,10 @@ namespace MqttBroker.Database
         public DbSet<Client> Clients { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
 
+        public DbSet<NamedSubscription> NamedSubscriptions { get; set; }
+        public DbSet<ClientNamedSubscription> ClientNamedSubscriptions { get; set; }
+
+
         public BrokerDbContext(DbContextOptions<BrokerDbContext> options)
             : base(options)
         {
