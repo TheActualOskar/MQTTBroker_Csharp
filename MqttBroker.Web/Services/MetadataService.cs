@@ -48,7 +48,7 @@ namespace MqttBroker.Web.Services
                 {
                     await tx.RunAsync(@"
                         MERGE (d:Device {id: $deviceId})
-                        MERGE (s:Datastream {id: $streamId})
+                        MERGE (s:Datastream {streamId: $streamId})
                         SET s.unit = $unit, s.frequency = $frequency
                         MERGE (t:Topic {name: $topicName})
                         MERGE (d)-[:PROVIDES]->(s)
@@ -113,7 +113,7 @@ namespace MqttBroker.Web.Services
 
             try
             {
-                var cursor = await session.RunAsync("MATCH (s:Stream) RETURN DISTINCT s.type AS type ORDER BY type");
+                var cursor = await session.RunAsync("MATCH (s:Datastream) RETURN DISTINCT s.type AS type ORDER BY type");
                 await cursor.ForEachAsync(record => results.Add(record["type"].As<string>()));
             }
             finally
@@ -127,7 +127,7 @@ namespace MqttBroker.Web.Services
         public async Task<List<CreateTopicModel.StreamPreview>> QueryStreamsByFilterAsync(CreateTopicModel.FilterModel filter)
         {
             var query = new StringBuilder();
-            query.AppendLine("MATCH (b:Building)-[:CONTAINS]->(r:Room)-[:HAS_STREAM]->(s:Stream)");
+            query.AppendLine("MATCH (b:Building)-[:CONTAINS]->(r:Room)-[:HAS_STREAM]->(s:Datastream)");
             query.AppendLine("WHERE 1=1");
 
             var parameters = new Dictionary<string, object>();
@@ -152,7 +152,7 @@ namespace MqttBroker.Web.Services
 
             if (filter.ActiveOnly)
             {
-                var threshold = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - (5 * 60 * 1000); // 5 minutes
+                var threshold = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - (5 * 60 * 1000);
                 query.AppendLine("AND s.lastSeen > $activeSince");
                 parameters["activeSince"] = threshold;
             }
@@ -194,6 +194,34 @@ namespace MqttBroker.Web.Services
             }
 
             return results;
+        }
+
+        public async Task CreateVirtualTopicFromSmartFilter(string virtualTopicName, int clientId, List<string> streamIds)
+        {
+            var session = _driver.AsyncSession();
+            try
+            {
+                await session.WriteTransactionAsync(async tx =>
+                {
+                    await tx.RunAsync(@"
+                MERGE (vt:Topic:VirtualTopic { name: $topicName, ownerId: $ownerId })
+                WITH vt
+                UNWIND $streamIds AS sid
+                MATCH (s:Datastream {streamId: sid})
+                MERGE (s)-[:PUBLISHED_AS]->(vt)
+            ",
+                    new
+                    {
+                        topicName = virtualTopicName,
+                        ownerId = clientId.ToString(),
+                        streamIds = streamIds.Cast<object>().ToList()
+                    });
+                });
+            }
+            finally
+            {
+                await session.CloseAsync();
+            }
         }
 
         public async Task<List<CreateTopicModel.StreamPreview>> QueryStreamsByCypherAsync(string cypherQuery)

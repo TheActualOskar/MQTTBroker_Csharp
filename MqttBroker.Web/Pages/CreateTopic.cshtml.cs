@@ -104,12 +104,28 @@ namespace MqttBroker.Web.Pages
 
                 var query = BuildCypherQueryFromFilter(Filter);
 
+                var virtualTopicName = $"virtual/{client.Id}/{Input.Name.Replace(" ", "_")}";
+
+                // Ensure PreviewResults are populated
+                if (PreviewResults == null)
+                {
+                    var preview = await _metadataService.QueryStreamsByFilterAsync(Filter);
+                    PreviewResults = new PreviewResultModel
+                    {
+                        Total = preview.Count,
+                        Active = preview.Count(s => s.LastSeen.Contains("min")),
+                        Inactive = preview.Count(s => !s.LastSeen.Contains("min")),
+                        Streams = preview
+                    };
+                }
+
                 var namedSubscription = new NamedSubscription
                 {
                     Name = Input.Name ?? string.Empty,
                     Description = Input.Description ?? string.Empty,
                     CypherQuery = query,
-                    CurrentMatchCount = PreviewResults?.Streams.Count ?? 0,
+                    TopicName = virtualTopicName,
+                    CurrentMatchCount = PreviewResults.Streams.Count,
                     CreatedByClientId = client.Id,
                     CreatedAt = DateTime.UtcNow,
                     LastResultHash = string.Empty,
@@ -127,11 +143,13 @@ namespace MqttBroker.Web.Pages
 
                 await _db.SaveChangesAsync();
 
+                var streamIds = PreviewResults.Streams.Select(s => s.StreamId).ToList();
+                await _metadataService.CreateVirtualTopicFromSmartFilter(virtualTopicName, client.Id, streamIds);
+
                 Result = namedSubscription;
 
                 return Page();
             }
-
             return Page();
         }
 
@@ -145,7 +163,7 @@ namespace MqttBroker.Web.Pages
         private string BuildCypherQueryFromFilter(FilterModel filter)
         {
             var query = new StringBuilder();
-            query.AppendLine("MATCH (b:Building)-[:CONTAINS]->(r:Room)-[:HAS_STREAM]->(s:Stream)");
+            query.AppendLine("MATCH (b:Building)-[:CONTAINS]->(r:Room)-[:HAS_STREAM]->(s:Datastream)");
             query.AppendLine("WHERE 1=1");
 
             if (filter.Building.Any())
