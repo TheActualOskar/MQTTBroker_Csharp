@@ -1,0 +1,32 @@
+﻿@page "SmartFilterDetails"
+@model MqttBroker.Web.Pages.SmartFilterDetailsModel
+@{
+    ViewData["Title"] = "Smart Filter Details";
+}
+
+<h2>@Model.Subscription.Name</h2>
+<p>@Model.Subscription.Description</p>
+<p><strong>Topic:</strong> @Model.Subscription.TopicName</p>
+<p><strong>Streams:</strong> @Model.Subscription.CurrentMatchCount</p>
+
+<table class="table-auto w-full mt-4 border">
+    <thead class="bg-gray-100">
+        <tr>
+            <th class="px-4 py-2">Stream ID</th>
+            <th class="px-4 py-2">Type</th>
+            <th class="px-4 py-2">Location</th>
+            <th class="px-4 py-2">Last Seen</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var stream in Model.Streams)
+        {
+            <tr>
+                <td class="border px-4 py-2">@stream.StreamId</td>
+                <td class="border px-4 py-2">@stream.Type</td>
+                <td class="border px-4 py-2">@stream.Location</td>
+                <td class="border px-4 py-2">@stream.LastSeen</td>
+            </tr>
+        }
+    </tbody>
+</table>

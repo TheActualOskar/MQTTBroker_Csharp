@@ -196,6 +196,34 @@ namespace MqttBroker.Web.Services
             return results;
         }
 
+        public async Task<List<CreateTopicModel.StreamPreview>> QueryStreamsByCypherAsync(string cypherQuery)
+        {
+            var results = new List<CreateTopicModel.StreamPreview>();
+            var session = _driver.AsyncSession();
+
+            try
+            {
+                var cursor = await session.RunAsync(cypherQuery);
+                await cursor.ForEachAsync(record =>
+                {
+                    var streamNode = record["s"].As<INode>();
+                    results.Add(new CreateTopicModel.StreamPreview
+                    {
+                        StreamId = streamNode.Properties.ContainsKey("streamId") ? streamNode.Properties["streamId"].As<string>() : "",
+                        Type = streamNode.Properties.ContainsKey("type") ? streamNode.Properties["type"].As<string>() : "",
+                        Location = streamNode.Properties.ContainsKey("location") ? streamNode.Properties["location"].As<string>() : "",
+                        LastSeen = streamNode.Properties.ContainsKey("lastSeen") ? FormatLastSeen(streamNode.Properties["lastSeen"].As<long>()) : "unknown"
+                    });
+                });
+            }
+            finally
+            {
+                await session.CloseAsync();
+            }
+
+            return results;
+        }
+
         public async ValueTask DisposeAsync()
         {
             if (_driver != null)

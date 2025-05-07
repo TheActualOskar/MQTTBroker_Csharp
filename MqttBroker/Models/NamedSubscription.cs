@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MqttBroker.Models
 {
@@ -13,8 +14,9 @@ namespace MqttBroker.Models
         public string Description { get; set; } = string.Empty;
 
         [Required]
+        [Column(TypeName = "text")]
         public string CypherQuery { get; set; } = string.Empty;
-
+        public string TopicName { get; set; } = string.Empty;
         public int CreatedByClientId { get; set; }
         public Client CreatedByClient { get; set; }
 

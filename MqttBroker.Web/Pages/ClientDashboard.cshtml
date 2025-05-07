@@ -41,7 +41,7 @@
     {
         <div class="topic-card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span>@smartFilter.Name</span>
+                <a asp-page="/SmartFilterDetails" asp-route-id="@smartFilter.Id">@smartFilter.Name</a>
                 <form method="post" style="display: inline;">
                     <input type="hidden" name="SmartFilterId" value="@smartFilter.Id" />
                     <button type="submit" name="Action" value="unsubscribeSmartFilter">Unsubscribe</button>
@@ -51,6 +51,7 @@
         </div>
     }
 </div>
+
 
 <hr />
 
