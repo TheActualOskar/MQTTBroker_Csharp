@@ -80,13 +80,27 @@ namespace MqttBroker.Actors
                 try
                 {
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                    if (bytesRead == 0) break;
+                    if (bytesRead == 0)
+                    {
+                        Console.WriteLine("[-] Client disconnected: clean disconnect.");
+                        break;
+                    }
 
                     var packetData = buffer.Take(bytesRead).ToArray();
+
+                    // Diagnostic Logging
+                    Console.WriteLine($"[DEBUG] Raw packet ({bytesRead} bytes): {BitConverter.ToString(packetData)}");
+
+                    if (bytesRead > 1)
+                    {
+                        int remainingLength = packetData[1];
+                        Console.WriteLine($"[DEBUG] Remaining Length (from header): {remainingLength}");
+                    }
+
                     var packetType = GetPacketType(packetData[0]);
+                    Console.WriteLine($"[DEBUG] Packet Type Detected: {packetType}");
 
                     var packet = new InboundMqttPacket(packetType, packetData, stream);
-
 
                     switch (packet.PacketType)
                     {
@@ -100,11 +114,8 @@ namespace MqttBroker.Actors
                             break;
 
                         case MqttPacketType.Subscribe:
-                            // 1️⃣ First, send raw packet for DB storage
                             _subscribeHandler.Tell(new MqttRawPacket(packet.PacketType, packet.RawBytes));
-
-                            // 2️⃣ Then send for in-memory stream routing
-                            _subscribeHandler.Tell(packet); // InboundMqttPacket
+                            _subscribeHandler.Tell(packet);
                             break;
 
                         default:
@@ -114,14 +125,15 @@ namespace MqttBroker.Actors
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"❌ Error with client {client.Client.RemoteEndPoint}: {ex.Message}");
+                    Console.WriteLine($"❌ Error with client {client.Client?.RemoteEndPoint}: {ex.Message}");
                     break;
                 }
             }
 
             client.Close();
-            Console.WriteLine($"[-] Client disconnected: {client.Client.RemoteEndPoint}");
+            Console.WriteLine($"[-] Client disconnected.");
         }
+
 
         private void SendConnAck(NetworkStream stream)
         {
