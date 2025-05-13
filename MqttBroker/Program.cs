@@ -14,7 +14,7 @@ class Program
 
         var connectionString = "Host=localhost;Port=5432;Database=mqttbrokerdb;Username=postgres;Password=1234";
 
-        // ✅ Manually create DbContextOptions
+        //  Manually create DbContextOptions
         var optionsBuilder = new DbContextOptionsBuilder<BrokerDbContext>();
         optionsBuilder.UseNpgsql(connectionString);
 
@@ -26,7 +26,7 @@ class Program
 
         var eventNotifier = system.ActorOf(EventNotifier.Props(dbContext, config), "EventNotifier");
 
-        // ✅ Setup Neo4j Driver
+        //  Setup Neo4j Driver
         var neo4jDriver = GraphDatabase.Driver(
             "bolt://localhost:7687",
             AuthTokens.Basic("neo4j", "12345678")
@@ -35,7 +35,7 @@ class Program
         var webSocketServer = system.ActorOf(WebSocketServerActor.Props(), "WebSocketServer");
         var messageRouter = system.ActorOf(Props.Create(() => new MessageRouter()), "MessageRouter");
 
-        // ✅ Inject MessageRouter, WebSocketServer, and Neo4j Driver
+        //  Inject MessageRouter, WebSocketServer, and Neo4j Driver
         var publishHandler = system.ActorOf(
             Props.Create(() => new PublishHandler(messageRouter, webSocketServer, neo4jDriver)),
             "PublishHandler"
@@ -49,7 +49,7 @@ class Program
             "PackageListener"
         );
 
-        // ✅ Keeps the app running forever
+        // Keeps the app running forever
         await Task.Delay(-1);
     }
 }
