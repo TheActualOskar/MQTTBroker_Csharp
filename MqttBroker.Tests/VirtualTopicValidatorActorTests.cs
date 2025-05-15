@@ -1,46 +1,94 @@
 ﻿using Xunit;
-using Moq;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit.Xunit2;
 using MqttBroker.Actors;
 using MqttBroker.Messages;
 using MqttBroker.Helpers;
 using Neo4j.Driver;
+using System.Linq;
 
 namespace MqttBroker.Tests
 {
     public class VirtualTopicValidatorActorTests : TestKit
     {
         [Fact]
-        public void Should_Validate_And_Apply_Label_When_Datastream_Matches_VirtualTopic()
+        public async Task Should_Apply_Label_In_Neo4j_With_Realistic_Graph()
         {
-            // Arrange: Mock the Topic Definition Provider with one virtual topic
-            var mockTopicProvider = new Mock<IVirtualTopicDefinitionProvider>();
-            mockTopicProvider.Setup(p => p.GetActiveVirtualTopicsAsync())
-                .ReturnsAsync(new List<VirtualTopicDefinition>
-                {
-                    new VirtualTopicDefinition
-                    {
-                        Name = "RoomATemperatureSensors",
-                        ExpectedLabels = new List<string> { "Temperature", "RoomA" }
-                    }
-                });
+            var driver = GraphDatabase.Driver("bolt://localhost:7687", AuthTokens.Basic("neo4j", "12345678"));
 
-            // Arrange: Mock Neo4j Driver (we won't actually execute Cypher in this test)
-            var mockNeo4jDriver = new Mock<IDriver>();
+            await ClearDatabase(driver);
+            await CreateBuildingRoomDatastreamGraph(driver, "BuildingA", "RoomA", "sensor-123", "Temperature");
+            await CreateTestVirtualTopic(driver, "RoomATemperatureSensors", new[] { "Temperature", "RoomA" });
 
-            // Create the actor with the mocks
-            var actor = Sys.ActorOf(Props.Create(() =>
-                new VirtualTopicValidatorActor(mockNeo4jDriver.Object, mockTopicProvider.Object)));
+            var topicProvider = new Neo4jVirtualTopicDefinitionProvider(driver);
+            var actor = Sys.ActorOf(Props.Create(() => new VirtualTopicValidatorActor(driver, topicProvider)));
 
-            // Act: Send a message with matching labels
             actor.Tell(new ValidateDatastreamMessage("sensor-123", new List<string> { "Temperature", "RoomA" }));
 
-            // Assert: No direct assertion here since ApplyVirtualTopicLabel is private.
-            // You can check logs, or later refactor to expose effect for better testability.
+            await Task.Delay(500);
 
-            // For now, just running this ensures no exceptions are thrown.
+            var hasRelationship = await CheckIfDatastreamHasPublishedAsRelationship(driver, "sensor-123", "RoomATemperatureSensors");
+            Assert.True(hasRelationship);
+
         }
+
+        private async Task ClearDatabase(IDriver driver)
+        {
+            await using var session = driver.AsyncSession();
+            await session.RunAsync("MATCH (n) DETACH DELETE n");
+        }
+
+        private async Task CreateBuildingRoomDatastreamGraph(IDriver driver, string buildingName, string roomName, string streamId, string datastreamLabel)
+        {
+            await using var session = driver.AsyncSession();
+            var cypher = $@"
+    CREATE (b:Building {{ name: $buildingName }})
+    CREATE (r:Room {{ name: $roomName }})
+    CREATE (d:Datastream:{datastreamLabel}:RoomA {{ id: $streamId }})
+    CREATE (b)-[:HAS_ROOM]->(r)
+    CREATE (r)-[:HAS_DATASTREAM]->(d)
+";
+            await session.RunAsync(cypher, new { buildingName, roomName, streamId });
+
+            // Diagnostic: Log actual labels after creation
+            var checkLabelsCypher = @"
+        MATCH (d:Datastream {id: $streamId})
+        RETURN labels(d) AS labels
+    ";
+            var cursor = await session.RunAsync(checkLabelsCypher, new { streamId });
+            if (await cursor.FetchAsync())
+            {
+                var labels = cursor.Current["labels"].As<List<object>>().Select(x => x.ToString());
+                Console.WriteLine($"Datastream labels after creation: {string.Join(", ", labels)}");
+            }
+        }
+
+
+        private async Task CreateTestVirtualTopic(IDriver driver, string name, IEnumerable<string> expectedLabels)
+        {
+            await using var session = driver.AsyncSession();
+            var cypher = @"
+                CREATE (:VirtualTopic { name: $name, expectedLabels: $expectedLabels })
+            ";
+            await session.RunAsync(cypher, new { name, expectedLabels = expectedLabels.ToList() });
+        }
+
+        private async Task<bool> CheckIfDatastreamHasPublishedAsRelationship(IDriver driver, string streamId, string topicName)
+        {
+            await using var session = driver.AsyncSession();
+            var cypher = @"
+        MATCH (d:Datastream {id: $streamId})-[:PUBLISHED_AS]->(v:VirtualTopic {name: $topicName})
+        RETURN count(v) > 0 AS hasRelationship
+    ";
+            var cursor = await session.RunAsync(cypher, new { streamId, topicName });
+            if (await cursor.FetchAsync())
+            {
+                return cursor.Current["hasRelationship"].As<bool>();
+            }
+            return false;
+        }
+
     }
 }

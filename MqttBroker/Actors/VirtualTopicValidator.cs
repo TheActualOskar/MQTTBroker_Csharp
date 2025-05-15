@@ -23,7 +23,8 @@ namespace MqttBroker.Actors
 
         private async Task HandleValidation(ValidateDatastreamMessage msg)
         {
-            var datastreamLabels = await LoadDatastreamLabelsAsync(msg.StreamId);
+            var datastreamLabels = await LoadDatastreamAndRoomLabelsAsync(msg.StreamId);
+
 
 
             var topics = await _topicProvider.GetActiveVirtualTopicsAsync();
@@ -32,38 +33,38 @@ namespace MqttBroker.Actors
             {
                 if (topic.ExpectedLabels.All(datastreamLabels.Contains))
                 {
-                    await ApplyVirtualTopicLabel(msg.StreamId, topic.Name);
+                    await ApplyVirtualTopicRelationship(msg.StreamId, topic.Name);
+
                 }
             }
         }
 
-        private async Task ApplyVirtualTopicLabel(string streamId, string topicName)
+        private async Task ApplyVirtualTopicRelationship(string streamId, string topicName)
         {
             if (string.IsNullOrWhiteSpace(topicName))
                 return;
 
-            var label = $"VirtualTopic_{topicName.Replace(" ", "_")}";
-
-            var cypher = $@"
-                MATCH (d:Datastream {{id: $streamId}})
-                SET d:`{label}`
-            ";
-
             await using var session = _neo4jDriver.AsyncSession();
-            await session.RunAsync(cypher, new { streamId });
+            var cypher = @"
+        MATCH (d:Datastream {id: $streamId})
+        MATCH (v:VirtualTopic {name: $topicName})
+        MERGE (d)-[:PUBLISHED_AS]->(v)
+    ";
+            await session.RunAsync(cypher, new { streamId, topicName });
         }
-        private async Task<List<string>> LoadDatastreamLabelsAsync(string streamId)
+
+        private async Task<List<string>> LoadDatastreamAndRoomLabelsAsync(string streamId)
         {
             await using var session = _neo4jDriver.AsyncSession();
             var cursor = await session.RunAsync(@"
-                 MATCH (d:Datastream {id: $streamId})
-                 RETURN labels(d) AS labels
-              ", new { streamId });
-
+        MATCH (d:Datastream {id: $streamId})
+        OPTIONAL MATCH (r:Room)-[:HAS_DATASTREAM]->(d)
+        RETURN labels(d) + r.name AS combinedLabels
+    ", new { streamId });
 
             if (await cursor.FetchAsync())
             {
-                return cursor.Current["labels"].As<List<object>>()
+                return cursor.Current["combinedLabels"].As<List<object>>()
                              .Select(label => label.ToString())
                              .ToList();
             }
