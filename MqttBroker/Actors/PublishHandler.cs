@@ -13,8 +13,9 @@ namespace MqttBroker.Actors
         private readonly IActorRef _messageRouter;
         private readonly IActorRef _webSocketServer;
         private readonly IDriver _neo4jDriver;
+        private readonly IActorRef _virtualTopicValidator;
 
-        public PublishHandler(IActorRef messageRouter, IActorRef webSocketServer, IDriver neo4jDriver)
+        public PublishHandler(IActorRef messageRouter, IActorRef webSocketServer, IDriver neo4jDriver, IActorRef virtualTopicValidator)
         {
             _messageRouter = messageRouter;
             _webSocketServer = webSocketServer;
@@ -22,6 +23,7 @@ namespace MqttBroker.Actors
 
             Receive<MqttRawPacket>(HandlePublish);
             Receive<ResolvedVirtualTopics>(HandleResolvedTopics);
+            _virtualTopicValidator = virtualTopicValidator;
         }
 
         private void HandlePublish(MqttRawPacket packet)

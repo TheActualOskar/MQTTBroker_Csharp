@@ -5,6 +5,8 @@ using Microsoft.Extensions.Configuration;
 using MqttBroker.Actors;
 using MqttBroker.Database;
 using Neo4j.Driver;
+using MqttBroker.Helpers;
+
 
 class Program
 {
@@ -32,14 +34,21 @@ class Program
             AuthTokens.Basic("neo4j", "12345678")
         );
 
+        var topicProvider = new Neo4jVirtualTopicDefinitionProvider(neo4jDriver);
+
+        var virtualTopicValidatorActor = system.ActorOf(Props.Create(() =>
+            new VirtualTopicValidatorActor(neo4jDriver, topicProvider)),
+            "VirtualTopicValidator"
+        );
+
         var webSocketServer = system.ActorOf(WebSocketServerActor.Props(), "WebSocketServer");
         var messageRouter = system.ActorOf(Props.Create(() => new MessageRouter()), "MessageRouter");
 
         //  Inject MessageRouter, WebSocketServer, and Neo4j Driver
         var publishHandler = system.ActorOf(
-            Props.Create(() => new PublishHandler(messageRouter, webSocketServer, neo4jDriver)),
-            "PublishHandler"
-        );
+     Props.Create(() => new PublishHandler(messageRouter, webSocketServer, neo4jDriver, virtualTopicValidatorActor)),
+     "PublishHandler"
+ );
 
         var subscribeHandler = system.ActorOf(Props.Create(() => new SubscribeHandler(dbContext)), "SubscribeHandler");
         var connectHandler = system.ActorOf(Props.Create(() => new ConnectHandler()), "ConnectHandler");

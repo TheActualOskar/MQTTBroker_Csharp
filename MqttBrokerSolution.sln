@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MqttBroker", "MqttBroker\Mq
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MqttBroker.Web", "MqttBroker.Web\MqttBroker.Web.csproj", "{47E8FE23-BBCF-1805-1038-6E88345E775F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MqttBroker.Tests", "MqttBroker.Tests\MqttBroker.Tests.csproj", "{48646FA2-FAD5-4728-B37B-2E9A722ACA4D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{47E8FE23-BBCF-1805-1038-6E88345E775F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{47E8FE23-BBCF-1805-1038-6E88345E775F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{47E8FE23-BBCF-1805-1038-6E88345E775F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48646FA2-FAD5-4728-B37B-2E9A722ACA4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48646FA2-FAD5-4728-B37B-2E9A722ACA4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48646FA2-FAD5-4728-B37B-2E9A722ACA4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48646FA2-FAD5-4728-B37B-2E9A722ACA4D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
