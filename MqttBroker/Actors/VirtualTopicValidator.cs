@@ -12,6 +12,8 @@ namespace MqttBroker.Actors
     {
         private readonly IDriver _neo4jDriver;
         private readonly IVirtualTopicDefinitionProvider _topicProvider;
+        private readonly HashSet<string> _validatedStreamIds = new HashSet<string>();
+
 
         public VirtualTopicValidatorActor(IDriver neo4jDriver, IVirtualTopicDefinitionProvider topicProvider)
         {
@@ -19,24 +21,44 @@ namespace MqttBroker.Actors
             _topicProvider = topicProvider;
 
             ReceiveAsync<ValidateDatastreamMessage>(HandleValidation);
+
         }
+
 
         private async Task HandleValidation(ValidateDatastreamMessage msg)
         {
+            // Skip if already validated
+            if (_validatedStreamIds.Contains(msg.StreamId))
+            {
+                Console.WriteLine($"[Cache] Stream {msg.StreamId} already validated. Skipping.");
+                return;
+            }
+
+            Console.WriteLine($"[Validator] Validating stream: {msg.StreamId}");
+
             var datastreamLabels = await LoadDatastreamAndRoomLabelsAsync(msg.StreamId);
-
-
+            Console.WriteLine($"[Validator] Loaded labels: {string.Join(", ", datastreamLabels)}");
 
             var topics = await _topicProvider.GetActiveVirtualTopicsAsync();
+            Console.WriteLine($"[Validator] Found {topics.Count} virtual topics");
 
             foreach (var topic in topics)
             {
+                Console.WriteLine($"[Validator] Evaluating topic: {topic.Name} with expected labels: {string.Join(", ", topic.ExpectedLabels)}");
+
                 if (topic.ExpectedLabels.All(datastreamLabels.Contains))
                 {
+                    Console.WriteLine($"[Validator] Match found. Linking {msg.StreamId} to {topic.Name}");
                     await ApplyVirtualTopicRelationship(msg.StreamId, topic.Name);
-
+                }
+                else
+                {
+                    Console.WriteLine($"[Validator] No match for topic {topic.Name}");
                 }
             }
+
+            // Add to cache after processing
+            _validatedStreamIds.Add(msg.StreamId);
         }
 
         private async Task ApplyVirtualTopicRelationship(string streamId, string topicName)

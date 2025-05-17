@@ -8,13 +8,14 @@ using MqttBroker.Messages;
 using MqttBroker.Helpers;
 using Neo4j.Driver;
 using System.Linq;
+using System;
 
 namespace MqttBroker.Tests
 {
     public class VirtualTopicValidatorActorTests : TestKit
     {
         [Fact]
-        public async Task Should_Apply_Label_In_Neo4j_With_Realistic_Graph()
+        public async Task Should_Apply_Label_Once_Even_If_Validated_Twice()
         {
             var driver = GraphDatabase.Driver("bolt://localhost:7687", AuthTokens.Basic("neo4j", "12345678"));
 
@@ -25,13 +26,17 @@ namespace MqttBroker.Tests
             var topicProvider = new Neo4jVirtualTopicDefinitionProvider(driver);
             var actor = Sys.ActorOf(Props.Create(() => new VirtualTopicValidatorActor(driver, topicProvider)));
 
+            // First validation
             actor.Tell(new ValidateDatastreamMessage("sensor-123", new List<string> { "Temperature", "RoomA" }));
-
             await Task.Delay(500);
+            var firstCheck = await CheckIfDatastreamHasPublishedAsRelationship(driver, "sensor-123", "RoomATemperatureSensors");
+            Assert.True(firstCheck);
 
-            var hasRelationship = await CheckIfDatastreamHasPublishedAsRelationship(driver, "sensor-123", "RoomATemperatureSensors");
-            Assert.True(hasRelationship);
-
+            // Second validation (should hit cache and skip)
+            actor.Tell(new ValidateDatastreamMessage("sensor-123", new List<string> { "Temperature", "RoomA" }));
+            await Task.Delay(500);
+            var secondCheck = await CheckIfDatastreamHasPublishedAsRelationship(driver, "sensor-123", "RoomATemperatureSensors");
+            Assert.True(secondCheck);
         }
 
         private async Task ClearDatabase(IDriver driver)
@@ -44,19 +49,19 @@ namespace MqttBroker.Tests
         {
             await using var session = driver.AsyncSession();
             var cypher = $@"
-    CREATE (b:Building {{ name: $buildingName }})
-    CREATE (r:Room {{ name: $roomName }})
-    CREATE (d:Datastream:{datastreamLabel}:RoomA {{ id: $streamId }})
-    CREATE (b)-[:HAS_ROOM]->(r)
-    CREATE (r)-[:HAS_DATASTREAM]->(d)
-";
+                CREATE (b:Building {{ name: $buildingName }})
+                CREATE (r:Room {{ name: $roomName }})
+                CREATE (d:Datastream:{datastreamLabel}:RoomA {{ id: $streamId }})
+                CREATE (b)-[:HAS_ROOM]->(r)
+                CREATE (r)-[:HAS_DATASTREAM]->(d)
+            ";
             await session.RunAsync(cypher, new { buildingName, roomName, streamId });
 
             // Diagnostic: Log actual labels after creation
             var checkLabelsCypher = @"
-        MATCH (d:Datastream {id: $streamId})
-        RETURN labels(d) AS labels
-    ";
+                MATCH (d:Datastream {id: $streamId})
+                RETURN labels(d) AS labels
+            ";
             var cursor = await session.RunAsync(checkLabelsCypher, new { streamId });
             if (await cursor.FetchAsync())
             {
@@ -64,7 +69,6 @@ namespace MqttBroker.Tests
                 Console.WriteLine($"Datastream labels after creation: {string.Join(", ", labels)}");
             }
         }
-
 
         private async Task CreateTestVirtualTopic(IDriver driver, string name, IEnumerable<string> expectedLabels)
         {
@@ -79,9 +83,9 @@ namespace MqttBroker.Tests
         {
             await using var session = driver.AsyncSession();
             var cypher = @"
-        MATCH (d:Datastream {id: $streamId})-[:PUBLISHED_AS]->(v:VirtualTopic {name: $topicName})
-        RETURN count(v) > 0 AS hasRelationship
-    ";
+                MATCH (d:Datastream {id: $streamId})-[:PUBLISHED_AS]->(v:VirtualTopic {name: $topicName})
+                RETURN count(v) > 0 AS hasRelationship
+            ";
             var cursor = await session.RunAsync(cypher, new { streamId, topicName });
             if (await cursor.FetchAsync())
             {
@@ -89,6 +93,5 @@ namespace MqttBroker.Tests
             }
             return false;
         }
-
     }
 }
