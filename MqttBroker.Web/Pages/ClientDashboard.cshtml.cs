@@ -104,5 +104,11 @@ namespace MqttBroker.Web.Pages
 
             return RedirectToPage();
         }
+        public IActionResult OnPostLogout()
+        {
+            HttpContext.Session.Clear();
+            return RedirectToPage("/Login");
+        }
+
     }
 }

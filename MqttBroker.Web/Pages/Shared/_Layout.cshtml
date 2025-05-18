@@ -22,11 +22,17 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
-                        </li>
+                        
                     </ul>
                 </div>
+                @if (Context.Session.GetString("Username") != null)
+                {
+                    <div class="navbar-nav ml-auto">
+                        <form method="post" asp-page-handler="Logout" asp-page="@Context.Request.Path">
+                            <button type="submit" class="nav-item nav-link btn btn-link" style="border: none; padding: 0;">Logout</button>
+                        </form>
+                    </div>
+                }
             </div>
         </nav>
     </header>

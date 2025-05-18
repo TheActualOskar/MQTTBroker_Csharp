@@ -31,6 +31,8 @@ namespace MqttBroker.Web.Pages
         [BindProperty] public string Unit { get; set; }
         [BindProperty] public string Frequency { get; set; }
         [BindProperty] public string TopicName { get; set; }
+        [BindProperty] public string Labels { get; set; }
+
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -76,5 +78,11 @@ namespace MqttBroker.Web.Pages
 
             return Page();
         }
+        public IActionResult OnPostLogout()
+        {
+            HttpContext.Session.Clear();
+            return RedirectToPage("/Login");
+        }
+
     }
 }
