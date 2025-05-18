@@ -2,22 +2,21 @@ using System.Security.Cryptography;
 using System.Text;
 using MqttBroker.Database;
 using MqttBroker.Models;
-
-
 using Microsoft.EntityFrameworkCore;
 using Akka.Actor;
 using MqttBroker.Actors;
 using Neo4j.Driver;
+using MqttBroker.Helpers;
+using MqttBroker.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddSession();
+builder.Services.AddControllers(); // ? Add Controller Support
 
-
-//graph database -> my topics
+// Graph database -> my topics
 var config = builder.Configuration.GetSection("Neo4j");
 builder.Services.AddSingleton(new MqttBroker.Web.Services.MetadataService(
     config["Uri"],
@@ -32,32 +31,41 @@ builder.Services.AddSingleton<Neo4j.Driver.IDriver>(provider =>
     )
 );
 
-
-
-
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<MqttBroker.Web.Services.SubscriptionService>();
 
-
-//client database -> users and subscriptions
+// Client database -> users and subscriptions
 builder.Services.AddDbContext<BrokerDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Actor System
+var actorSystem = ActorSystem.Create("MqttBrokerWebSystem");
 
-
-
+// Register EventNotifier Actor
 builder.Services.AddSingleton<IActorRef>(provider =>
 {
-    var system = ActorSystem.Create("MqttBrokerWebSystem");
-
     var dbOptions = new DbContextOptionsBuilder<BrokerDbContext>()
         .UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
         .Options;
 
     var dbContext = new BrokerDbContext(dbOptions);
-    var config = builder.Configuration; // ? Get IConfiguration
+    var config = builder.Configuration;
 
-    return system.ActorOf(EventNotifier.Props(dbContext, config), "EventNotifierWeb");
+    return actorSystem.ActorOf(EventNotifier.Props(dbContext, config), "EventNotifierWeb");
+});
+
+// Register VirtualTopicValidator Actor (corrected)
+builder.Services.AddSingleton<IVirtualTopicValidatorActorRef>(provider =>
+{
+    var neo4jDriver = provider.GetRequiredService<IDriver>();
+    var topicProvider = new Neo4jVirtualTopicDefinitionProvider(neo4jDriver);
+
+    var actorRef = actorSystem.ActorOf(
+        Props.Create(() => new VirtualTopicValidatorActor(neo4jDriver, topicProvider)),
+        "VirtualTopicValidator"
+    );
+
+    return new VirtualTopicValidatorActorRef(actorRef);
 });
 
 
@@ -69,23 +77,19 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
-
 app.UseSession();
-
 app.UseAuthorization();
 
 app.MapRazorPages();
+app.MapControllers(); // ? Map Controllers Here
 
-
-
+// Ensure admin and test-client exist in the DB
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<BrokerDbContext>();
@@ -120,13 +124,9 @@ using (var scope = app.Services.CreateScope())
             PasswordHash = hashedPassword,
             Role = "client"
         });
-        db.SaveChanges();
 
+        db.SaveChanges();
     }
 }
-
-
-
-
 
 app.Run();

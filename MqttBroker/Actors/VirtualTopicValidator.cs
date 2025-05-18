@@ -15,12 +15,15 @@ namespace MqttBroker.Actors
         private readonly HashSet<string> _validatedStreamIds = new HashSet<string>();
 
 
+
         public VirtualTopicValidatorActor(IDriver neo4jDriver, IVirtualTopicDefinitionProvider topicProvider)
         {
             _neo4jDriver = neo4jDriver;
             _topicProvider = topicProvider;
 
             ReceiveAsync<ValidateDatastreamMessage>(HandleValidation);
+            ReceiveAsync<ForceFullDatastreamRescan>(_ => HandleFullRescan());
+
 
         }
 
@@ -93,5 +96,23 @@ namespace MqttBroker.Actors
 
             return new List<string>();
         }
+        private async Task HandleFullRescan()
+        {
+            Console.WriteLine("[Admin] Starting full datastream rescan...");
+
+            await using var session = _neo4jDriver.AsyncSession();
+            var cursor = await session.RunAsync("MATCH (d:Datastream) RETURN d.id AS streamId");
+
+            while (await cursor.FetchAsync())
+            {
+                var streamId = cursor.Current["streamId"].As<string>();
+                Console.WriteLine($"[Admin] Rescanning datastream: {streamId}");
+                // Bypass cache and force validation
+                await HandleValidation(new ValidateDatastreamMessage(streamId, new List<string>()));
+            }
+
+            Console.WriteLine("[Admin] Full datastream rescan complete.");
+        }
+
     }
 }

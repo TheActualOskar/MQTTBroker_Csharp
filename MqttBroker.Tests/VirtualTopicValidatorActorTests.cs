@@ -32,7 +32,7 @@ namespace MqttBroker.Tests
             var firstCheck = await CheckIfDatastreamHasPublishedAsRelationship(driver, "sensor-123", "RoomATemperatureSensors");
             Assert.True(firstCheck);
 
-            // Second validation (should hit cache and skip)
+            // Second validation (hit cache and skip)
             actor.Tell(new ValidateDatastreamMessage("sensor-123", new List<string> { "Temperature", "RoomA" }));
             await Task.Delay(500);
             var secondCheck = await CheckIfDatastreamHasPublishedAsRelationship(driver, "sensor-123", "RoomATemperatureSensors");
