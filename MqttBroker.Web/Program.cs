@@ -14,7 +14,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddSession();
-builder.Services.AddControllers(); // ? Add Controller Support
+builder.Services.AddControllers(); 
+builder.Services.AddHttpClient();
+
 
 // Graph database -> my topics
 var config = builder.Configuration.GetSection("Neo4j");
