@@ -266,5 +266,27 @@ namespace MqttBroker.Web.Services
             var minutesAgo = (DateTimeOffset.UtcNow - lastSeen).TotalMinutes;
             return $"{Math.Round(minutesAgo)} min ago";
         }
+        public async Task<List<string>> GetRoomsInBuildingAsync(string buildingName)
+        {
+            var results = new List<string>();
+            var session = _driver.AsyncSession();
+
+            try
+            {
+                var query = @"
+            MATCH (b:Building {name: $buildingName})-[:HAS_ROOM]->(r:Room)
+            RETURN r.name AS name ORDER BY name";
+
+                var cursor = await session.RunAsync(query, new { buildingName });
+                await cursor.ForEachAsync(record => results.Add(record["name"].As<string>()));
+            }
+            finally
+            {
+                await session.CloseAsync();
+            }
+
+            return results;
+        }
+
     }
 }

@@ -15,30 +15,48 @@
         <label>Device ID:</label>
         <input type="text" name="DeviceId" required />
     </div>
+
     <div class="form-group">
-        <label>Datastream ID:</label>
-        <input type="text" name="DatastreamId" required />
+        <label>Select Building:</label>
+        <select name="SelectedBuilding" required onchange="this.form.submit()">
+            <option value="">-- Choose Building --</option>
+            @foreach (var building in Model.AvailableBuildings)
+            {
+                <option value="@building" selected="@(building == Model.SelectedBuilding)">
+                    @building
+                </option>
+            }
+        </select>
     </div>
+
     <div class="form-group">
-        <label>Unit:</label>
-        <input type="text" name="Unit" required />
+        <label>Select Room:</label>
+        <select name="SelectedRoom" required @(Model.SelectedBuilding == null ? "disabled" : "")>
+            <option value="">-- Choose Room --</option>
+            @foreach (var room in Model.AvailableRooms)
+            {
+                <option value="@room" selected="@(room == Model.SelectedRoom)">
+                    @room
+                </option>
+            }
+        </select>
     </div>
+
     <div class="form-group">
-        <label>Frequency:</label>
-        <input type="text" name="Frequency" required />
+        <label>Sensor Type:</label>
+        <select name="SensorType" required>
+            <option value="">-- Choose Sensor --</option>
+            <option value="Temperature">Temperature Sensor</option>
+            <option value="Humidity">Humidity Sensor</option>
+        </select>
     </div>
-    <div class="form-group">
-        <label>Topic Name:</label>
-        <input type="text" name="TopicName" required />
-    </div>
-    <div class="form-group">
-        <label>Labels (comma-separated):</label>
-        <input type="text" name="Labels" placeholder="e.g. Temperature,RoomA" />
-    </div>
+
     <div class="form-actions">
         <button type="submit">➕ Create Datastream</button>
     </div>
 </form>
+
+
 
 <hr />
 
