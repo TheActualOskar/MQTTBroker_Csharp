@@ -12,30 +12,32 @@
 
 <form method="post" class="datastream-form">
     <div class="form-group">
-        <label>Device ID:</label>
-        <input type="text" name="DeviceId" required />
+        <label asp-for="DeviceId">Device ID:</label>
+        <input asp-for="DeviceId" class="form-control" required />
     </div>
 
     <div class="form-group">
-        <label>Select Building:</label>
-        <select name="SelectedBuilding" required onchange="this.form.submit()">
+        <label asp-for="SelectedBuilding">Select Building:</label>
+        <select asp-for="SelectedBuilding" class="form-control" required onchange="this.form.submit()">
             <option value="">-- Choose Building --</option>
             @foreach (var building in Model.AvailableBuildings)
             {
-                <option value="@building" selected="@(building == Model.SelectedBuilding)">
-                    @building
-                </option>
+                <option value="@building">@building</option>
             }
         </select>
     </div>
 
+    @{
+        var isRoomDisabled = string.IsNullOrEmpty(Model.SelectedBuilding) ? "disabled" : "";
+    }
+
     <div class="form-group">
-        <label>Select Room:</label>
-        <select name="SelectedRoom" required @(Model.SelectedBuilding == null ? "disabled" : "")>
+        <label for="SelectedRoom">Select Room:</label>
+        <select name="SelectedRoom" class="form-control" required @isRoomDisabled>
             <option value="">-- Choose Room --</option>
             @foreach (var room in Model.AvailableRooms)
             {
-                <option value="@room" selected="@(room == Model.SelectedRoom)">
+                <option value="@room" selected="@(room == Model.SelectedRoom ? "selected" : null)">
                     @room
                 </option>
             }
@@ -43,20 +45,18 @@
     </div>
 
     <div class="form-group">
-        <label>Sensor Type:</label>
-        <select name="SensorType" required>
+        <label asp-for="SensorType">Sensor Type:</label>
+        <select asp-for="SensorType" class="form-control" required>
             <option value="">-- Choose Sensor --</option>
-            <option value="Temperature">Temperature Sensor</option>
-            <option value="Humidity">Humidity Sensor</option>
+            <option value="Temperature">Temperature</option>
+            <option value="Humidity">Humidity</option>
         </select>
     </div>
 
     <div class="form-actions">
-        <button type="submit">➕ Create Datastream</button>
+        <button type="submit" class="btn btn-primary">➕ Create Datastream</button>
     </div>
 </form>
-
-
 
 <hr />
 
@@ -90,9 +90,6 @@ else
     <button type="submit" class="btn btn-secondary">🔄 Refresh Virtual Topics</button>
 </form>
 
-
-
-
 <style>
     .datastream-form {
         max-width: 500px;
@@ -113,7 +110,8 @@ else
             margin-bottom: 5px;
         }
 
-        .form-group input[type="text"] {
+        .form-group input[type="text"],
+        .form-group select {
             width: 100%;
             padding: 8px;
             font-size: 1rem;
@@ -138,6 +136,7 @@ else
             .form-actions button:hover {
                 background-color: #0056b3;
             }
+
     .status-message {
         padding: 10px;
         margin: 10px 0;

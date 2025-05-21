@@ -3,6 +3,7 @@ using Neo4j.Driver;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace MqttBroker.Web.Services
 {
@@ -38,29 +39,36 @@ namespace MqttBroker.Web.Services
             return topics;
         }
 
-        public async Task CreateDatastreamAsync(string deviceId, string streamId, string unit, string frequency, string topicName)
+        public async Task CreateDatastreamAsync(
+    string streamId,
+    string buildingName,
+    string roomName,
+    string sensorType)
         {
             var session = _driver.AsyncSession();
 
             try
             {
+                var validSensorTypes = new[] { "Temperature", "Humidity" };
+                if (!validSensorTypes.Contains(sensorType))
+                    throw new ArgumentException("Invalid sensor type.");
+
+                var cypher = $@"
+            MATCH (b:Building {{name: $buildingName}})-[:HAS_ROOM]->(r:Room {{name: $roomName}})
+            CREATE (s:Datastream:{sensorType})
+            SET s.streamId = $streamId,
+                s.type = $sensorType
+            MERGE (r)-[:HAS_DATASTREAM]->(s)
+        ";
+
                 await session.WriteTransactionAsync(async tx =>
                 {
-                    await tx.RunAsync(@"
-                        MERGE (d:Device {id: $deviceId})
-                        MERGE (s:Datastream {streamId: $streamId})
-                        SET s.unit = $unit, s.frequency = $frequency
-                        MERGE (t:Topic {name: $topicName})
-                        MERGE (d)-[:PROVIDES]->(s)
-                        MERGE (s)-[:PUBLISHED_AS]->(t)
-                    ",
-                    new
+                    await tx.RunAsync(cypher, new
                     {
-                        deviceId,
                         streamId,
-                        unit,
-                        frequency,
-                        topicName
+                        buildingName,
+                        roomName,
+                        sensorType
                     });
                 });
             }
@@ -69,6 +77,11 @@ namespace MqttBroker.Web.Services
                 await session.CloseAsync();
             }
         }
+
+
+
+
+
 
         public async Task<List<string>> GetAllBuildingsAsync()
         {
@@ -204,12 +217,12 @@ namespace MqttBroker.Web.Services
                 await session.WriteTransactionAsync(async tx =>
                 {
                     await tx.RunAsync(@"
-                MERGE (vt:Topic:VirtualTopic { name: $topicName, ownerId: $ownerId })
-                WITH vt
-                UNWIND $streamIds AS sid
-                MATCH (s:Datastream {streamId: sid})
-                MERGE (s)-[:PUBLISHED_AS]->(vt)
-            ",
+                        MERGE (vt:Topic:VirtualTopic { name: $topicName, ownerId: $ownerId })
+                        WITH vt
+                        UNWIND $streamIds AS sid
+                        MATCH (s:Datastream {streamId: sid})
+                        MERGE (s)-[:PUBLISHED_AS]->(vt)
+                    ",
                     new
                     {
                         topicName = virtualTopicName,
@@ -266,6 +279,7 @@ namespace MqttBroker.Web.Services
             var minutesAgo = (DateTimeOffset.UtcNow - lastSeen).TotalMinutes;
             return $"{Math.Round(minutesAgo)} min ago";
         }
+
         public async Task<List<string>> GetRoomsInBuildingAsync(string buildingName)
         {
             var results = new List<string>();
@@ -274,8 +288,8 @@ namespace MqttBroker.Web.Services
             try
             {
                 var query = @"
-            MATCH (b:Building {name: $buildingName})-[:HAS_ROOM]->(r:Room)
-            RETURN r.name AS name ORDER BY name";
+                    MATCH (b:Building {name: $buildingName})-[:HAS_ROOM]->(r:Room)
+                    RETURN r.name AS name ORDER BY name";
 
                 var cursor = await session.RunAsync(query, new { buildingName });
                 await cursor.ForEachAsync(record => results.Add(record["name"].As<string>()));
@@ -287,6 +301,5 @@ namespace MqttBroker.Web.Services
 
             return results;
         }
-
     }
 }
