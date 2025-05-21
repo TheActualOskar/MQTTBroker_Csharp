@@ -56,19 +56,21 @@ builder.Services.AddSingleton<IActorRef>(provider =>
     return actorSystem.ActorOf(EventNotifier.Props(dbContext, config), "EventNotifierWeb");
 });
 
-// Register VirtualTopicValidator Actor (corrected)
+// Register VirtualTopicValidator Actor
 builder.Services.AddSingleton<IVirtualTopicValidatorActorRef>(provider =>
 {
     var neo4jDriver = provider.GetRequiredService<IDriver>();
     var topicProvider = new Neo4jVirtualTopicDefinitionProvider(neo4jDriver);
+    var eventNotifier = provider.GetRequiredService<IActorRef>();
 
     var actorRef = actorSystem.ActorOf(
-        Props.Create(() => new VirtualTopicValidatorActor(neo4jDriver, topicProvider)),
+        Props.Create(() => new VirtualTopicValidatorActor(neo4jDriver, topicProvider, eventNotifier)), 
         "VirtualTopicValidator"
     );
 
     return new VirtualTopicValidatorActorRef(actorRef);
 });
+
 
 
 

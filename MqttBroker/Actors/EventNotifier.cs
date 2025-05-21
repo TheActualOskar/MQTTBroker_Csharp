@@ -34,6 +34,8 @@ namespace MqttBroker.Actors
             _fromEmail = config["SmtpSettings:From"];
 
             Receive<NewTopicCreated>(msg => HandleNewTopic(msg.TopicName));
+            Receive<VirtualTopicBatchUpdate>(HandleBatchUpdate);
+
         }
 
         private void HandleNewTopic(string newTopic)
@@ -74,5 +76,30 @@ namespace MqttBroker.Actors
                 Console.WriteLine($"❌ Failed to send email to {to}: {ex.Message}");
             }
         }
+        private void HandleBatchUpdate(VirtualTopicBatchUpdate update)
+        {
+            foreach (var kvp in update.TopicToStreamIds)
+            {
+                var topic = kvp.Key;
+                var affectedStreamIds = kvp.Value;
+
+                var subscribers = _dbContext.Clients
+                    .Include(c => c.Subscriptions)
+                    .Where(c => c.Subscriptions.Any(s => topic.StartsWith(s.Topic)))
+                    .ToList();
+
+                foreach (var client in subscribers)
+                {
+                    SendEmail(
+                        to: client.Email,
+                        subject: $"🔄 Virtual Topic Updated: {topic}",
+                        body: $"The virtual topic '{topic}' was updated with {affectedStreamIds.Count} new stream(s)."
+                    );
+                }
+
+                Console.WriteLine($"📬 Notified {subscribers.Count} clients about batch update for '{topic}'");
+            }
+        }
+
     }
 }

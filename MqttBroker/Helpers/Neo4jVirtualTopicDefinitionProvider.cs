@@ -21,16 +21,14 @@ namespace MqttBroker.Helpers
 
             await using var session = _neo4jDriver.AsyncSession();
             var cursor = await session.RunAsync(@"
-                MATCH (v:VirtualTopic)
-                RETURN v.name AS name, v.expectedLabels AS labels
-            ");
+        MATCH (v:VirtualTopic)
+        RETURN v.name AS name, v.expectedLabels AS labels
+    ");
 
             while (await cursor.FetchAsync())
             {
                 var name = cursor.Current["name"].As<string>();
-                var labels = cursor.Current["labels"].As<List<object>>()
-                                .Select(l => l.ToString())
-                                .ToList();
+                var labels = cursor.Current["labels"]?.As<List<string>>() ?? new List<string>();
 
                 result.Add(new VirtualTopicDefinition
                 {
@@ -41,5 +39,6 @@ namespace MqttBroker.Helpers
 
             return result;
         }
+
     }
 }

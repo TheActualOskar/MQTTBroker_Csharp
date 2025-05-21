@@ -34,12 +34,11 @@ class Program
             AuthTokens.Basic("neo4j", "12345678")
         );
 
-        var topicProvider = new Neo4jVirtualTopicDefinitionProvider(neo4jDriver);
 
+        var topicProvider = new Neo4jVirtualTopicDefinitionProvider(neo4jDriver);
         var virtualTopicValidatorActor = system.ActorOf(Props.Create(() =>
-            new VirtualTopicValidatorActor(neo4jDriver, topicProvider)),
-            "VirtualTopicValidator"
-        );
+            new VirtualTopicValidatorActor(neo4jDriver, topicProvider, eventNotifier)), 
+            "VirtualTopicValidator");
 
         var webSocketServer = system.ActorOf(WebSocketServerActor.Props(), "WebSocketServer");
         var messageRouter = system.ActorOf(Props.Create(() => new MessageRouter()), "MessageRouter");

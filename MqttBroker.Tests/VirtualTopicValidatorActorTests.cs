@@ -24,7 +24,9 @@ namespace MqttBroker.Tests
             await CreateTestVirtualTopic(driver, "RoomATemperatureSensors", new[] { "Temperature", "RoomA" });
 
             var topicProvider = new Neo4jVirtualTopicDefinitionProvider(driver);
-            var actor = Sys.ActorOf(Props.Create(() => new VirtualTopicValidatorActor(driver, topicProvider)));
+            var actor = Sys.ActorOf(Props.Create(() =>
+            new VirtualTopicValidatorActor(driver, topicProvider, TestActor)));
+
 
             // First validation
             actor.Tell(new ValidateDatastreamMessage("sensor-123", new List<string> { "Temperature", "RoomA" }));
@@ -51,15 +53,18 @@ namespace MqttBroker.Tests
             var cypher = $@"
                 CREATE (b:Building {{ name: $buildingName }})
                 CREATE (r:Room {{ name: $roomName }})
-                CREATE (d:Datastream:{datastreamLabel}:RoomA {{ id: $streamId }})
+                CREATE (d:Datastream:{datastreamLabel}:`{roomName}` {{
+                    streamId: $streamId,
+                    type: $datastreamLabel
+                }})
                 CREATE (b)-[:HAS_ROOM]->(r)
                 CREATE (r)-[:HAS_DATASTREAM]->(d)
             ";
-            await session.RunAsync(cypher, new { buildingName, roomName, streamId });
+            await session.RunAsync(cypher, new { buildingName, roomName, streamId, datastreamLabel });
 
             // Diagnostic: Log actual labels after creation
             var checkLabelsCypher = @"
-                MATCH (d:Datastream {id: $streamId})
+                MATCH (d:Datastream {streamId: $streamId})
                 RETURN labels(d) AS labels
             ";
             var cursor = await session.RunAsync(checkLabelsCypher, new { streamId });
@@ -83,7 +88,7 @@ namespace MqttBroker.Tests
         {
             await using var session = driver.AsyncSession();
             var cypher = @"
-                MATCH (d:Datastream {id: $streamId})-[:PUBLISHED_AS]->(v:VirtualTopic {name: $topicName})
+                MATCH (d:Datastream {streamId: $streamId})-[:PUBLISHED_AS]->(v:VirtualTopic {name: $topicName})
                 RETURN count(v) > 0 AS hasRelationship
             ";
             var cursor = await session.RunAsync(cypher, new { streamId, topicName });

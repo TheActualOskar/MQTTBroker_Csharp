@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MqttBroker.Database;
@@ -103,10 +103,8 @@ namespace MqttBroker.Web.Pages
                 if (client == null) return RedirectToPage("/Login");
 
                 var query = BuildCypherQueryFromFilter(Filter);
-
                 var virtualTopicName = $"virtual/{client.Id}/{Input.Name.Replace(" ", "_")}";
 
-                // Ensure PreviewResults are populated
                 if (PreviewResults == null)
                 {
                     var preview = await _metadataService.QueryStreamsByFilterAsync(Filter);
@@ -144,12 +142,22 @@ namespace MqttBroker.Web.Pages
                 await _db.SaveChangesAsync();
 
                 var streamIds = PreviewResults.Streams.Select(s => s.StreamId).ToList();
-                await _metadataService.CreateVirtualTopicFromSmartFilter(virtualTopicName, client.Id, streamIds);
+                var expectedLabels = new List<string>();
+                if (Filter.SensorType != null) expectedLabels.AddRange(Filter.SensorType);
+                if (Filter.Room != null) expectedLabels.AddRange(Filter.Room);
+
+                await _metadataService.CreateVirtualTopicFromSmartFilter(
+                    virtualTopicName,
+                    client.Id,
+                    streamIds,
+                    expectedLabels
+                );
 
                 Result = namedSubscription;
-
                 return Page();
             }
+
+            // ✅ Ensure all code paths return a value
             return Page();
         }
 
@@ -163,7 +171,7 @@ namespace MqttBroker.Web.Pages
         private string BuildCypherQueryFromFilter(FilterModel filter)
         {
             var query = new StringBuilder();
-            query.AppendLine("MATCH (b:Building)-[:CONTAINS]->(r:Room)-[:HAS_STREAM]->(s:Datastream)");
+            query.AppendLine("MATCH (b:Building)-[:HAS_ROOM]->(r:Room)-[:HAS_DATASTREAM]->(s:Datastream)");
             query.AppendLine("WHERE 1=1");
 
             if (filter.Building.Any())

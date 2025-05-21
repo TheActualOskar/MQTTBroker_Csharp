@@ -140,7 +140,8 @@ namespace MqttBroker.Web.Services
         public async Task<List<CreateTopicModel.StreamPreview>> QueryStreamsByFilterAsync(CreateTopicModel.FilterModel filter)
         {
             var query = new StringBuilder();
-            query.AppendLine("MATCH (b:Building)-[:CONTAINS]->(r:Room)-[:HAS_STREAM]->(s:Datastream)");
+            query.AppendLine("MATCH (b:Building)-[:HAS_ROOM]->(r:Room)-[:HAS_DATASTREAM]->(s:Datastream)");
+
             query.AppendLine("WHERE 1=1");
 
             var parameters = new Dictionary<string, object>();
@@ -197,7 +198,10 @@ namespace MqttBroker.Web.Services
                         StreamId = record["streamId"].As<string>(),
                         Type = record["type"].As<string>(),
                         Location = record["location"].As<string>(),
-                        LastSeen = FormatLastSeen(record["lastSeen"].As<long>())
+                        LastSeen = record["lastSeen"] != null
+                        ? FormatLastSeen(record["lastSeen"].As<long>())
+                        : "unknown"
+
                     });
                 });
             }
@@ -209,7 +213,7 @@ namespace MqttBroker.Web.Services
             return results;
         }
 
-        public async Task CreateVirtualTopicFromSmartFilter(string virtualTopicName, int clientId, List<string> streamIds)
+        public async Task CreateVirtualTopicFromSmartFilter(string virtualTopicName, int clientId, List<string> streamIds, List<string> expectedLabels)
         {
             var session = _driver.AsyncSession();
             try
@@ -217,17 +221,19 @@ namespace MqttBroker.Web.Services
                 await session.WriteTransactionAsync(async tx =>
                 {
                     await tx.RunAsync(@"
-                        MERGE (vt:Topic:VirtualTopic { name: $topicName, ownerId: $ownerId })
-                        WITH vt
-                        UNWIND $streamIds AS sid
-                        MATCH (s:Datastream {streamId: sid})
-                        MERGE (s)-[:PUBLISHED_AS]->(vt)
-                    ",
+                MERGE (vt:Topic:VirtualTopic { name: $topicName, ownerId: $ownerId })
+                SET vt.expectedLabels = $expectedLabels
+                WITH vt
+                UNWIND $streamIds AS sid
+                MATCH (s:Datastream {streamId: sid})
+                MERGE (s)-[:PUBLISHED_AS]->(vt)
+            ",
                     new
                     {
                         topicName = virtualTopicName,
                         ownerId = clientId.ToString(),
-                        streamIds = streamIds.Cast<object>().ToList()
+                        streamIds = streamIds.Cast<object>().ToList(),
+                        expectedLabels = expectedLabels.Cast<object>().ToList()
                     });
                 });
             }
@@ -236,6 +242,7 @@ namespace MqttBroker.Web.Services
                 await session.CloseAsync();
             }
         }
+
 
         public async Task<List<CreateTopicModel.StreamPreview>> QueryStreamsByCypherAsync(string cypherQuery)
         {

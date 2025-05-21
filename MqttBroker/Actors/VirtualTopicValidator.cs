@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MqttBroker.Helpers;
 using MqttBroker.Messages;
+using System.IO;
 
 namespace MqttBroker.Actors
 {
@@ -12,12 +13,14 @@ namespace MqttBroker.Actors
     {
         private readonly IDriver _neo4jDriver;
         private readonly IVirtualTopicDefinitionProvider _topicProvider;
+        private readonly IActorRef _eventNotifier;
         private readonly HashSet<string> _validatedStreamIds = new();
 
-        public VirtualTopicValidatorActor(IDriver neo4jDriver, IVirtualTopicDefinitionProvider topicProvider)
+        public VirtualTopicValidatorActor(IDriver neo4jDriver, IVirtualTopicDefinitionProvider topicProvider, IActorRef eventNotifier)
         {
             _neo4jDriver = neo4jDriver;
             _topicProvider = topicProvider;
+            _eventNotifier = eventNotifier;
 
             ReceiveAsync<ValidateDatastreamMessage>(HandleValidation);
             ReceiveAsync<ForceFullDatastreamRescan>(_ => HandleFullRescan());
@@ -35,14 +38,14 @@ namespace MqttBroker.Actors
                 return;
             }
 
-            // Step 1: Write stream to DB
-            var cypher = $@"
-        MATCH (b:Building {{name: $building}})-[:HAS_ROOM]->(r:Room {{name: $room}})
-        CREATE (s:Datastream:{msg.SensorType})
-        SET s.streamId = $streamId,
-            s.type = $sensorType
-        MERGE (r)-[:HAS_DATASTREAM]->(s)
-    ";
+                         var cypher = @"
+                MATCH (b:Building { name: $building })-[:HAS_ROOM]->(r:Room { name: $room })
+                CREATE (s:Datastream:" + msg.SensorType + @")
+                SET s.streamId = $streamId,
+                    s.type = $sensorType
+                MERGE (r)-[:HAS_DATASTREAM]->(s)
+                ";
+
 
             await using var session = _neo4jDriver.AsyncSession();
             await session.RunAsync(cypher, new
@@ -53,21 +56,30 @@ namespace MqttBroker.Actors
                 sensorType = msg.SensorType
             });
 
-            // Step 2: Match against virtual topics (with known labels only)
             var labels = new List<string> { msg.SensorType, msg.Room };
             var virtualTopics = await _topicProvider.GetActiveVirtualTopicsAsync();
+            Console.WriteLine($"[Debug] Virtual topics found: {virtualTopics.Count}");
+
 
             foreach (var topic in virtualTopics)
             {
-                if (topic.ExpectedLabels.All(labels.Contains))
+                // Match if topic expects both this sensor type AND the room
+                bool matchesSensor = topic.ExpectedLabels.Any(label =>
+                    label.Trim().Equals(msg.SensorType.Trim(), StringComparison.OrdinalIgnoreCase));
+
+                bool matchesRoom = topic.ExpectedLabels.Any(label =>
+                    label.Trim().Equals(msg.Room.Trim(), StringComparison.OrdinalIgnoreCase));
+
+
+                if (matchesSensor && matchesRoom)
                 {
                     Console.WriteLine($"[Broker] Linking {msg.StreamId} to virtual topic {topic.Name}");
                     await ApplyVirtualTopicRelationship(msg.StreamId, topic.Name);
+                    _eventNotifier.Tell(new NewTopicCreated(topic.Name));
                 }
             }
 
         }
-
 
         private async Task HandleValidation(ValidateDatastreamMessage msg)
         {
@@ -89,10 +101,12 @@ namespace MqttBroker.Actors
             {
                 Console.WriteLine($"[Validator] Evaluating topic: {topic.Name} with expected labels: {string.Join(", ", topic.ExpectedLabels)}");
 
-                if (topic.ExpectedLabels.All(datastreamLabels.Contains))
+                if (topic.ExpectedLabels.Intersect(datastreamLabels).Count() >= 2)
+
                 {
                     Console.WriteLine($"[Validator] Match found. Linking {msg.StreamId} to {topic.Name}");
                     await ApplyVirtualTopicRelationship(msg.StreamId, topic.Name);
+                    _eventNotifier.Tell(new NewTopicCreated(topic.Name));
                 }
                 else
                 {
