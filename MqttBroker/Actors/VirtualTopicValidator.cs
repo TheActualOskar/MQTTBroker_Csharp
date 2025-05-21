@@ -12,9 +12,7 @@ namespace MqttBroker.Actors
     {
         private readonly IDriver _neo4jDriver;
         private readonly IVirtualTopicDefinitionProvider _topicProvider;
-        private readonly HashSet<string> _validatedStreamIds = new HashSet<string>();
-
-
+        private readonly HashSet<string> _validatedStreamIds = new();
 
         public VirtualTopicValidatorActor(IDriver neo4jDriver, IVirtualTopicDefinitionProvider topicProvider)
         {
@@ -23,14 +21,45 @@ namespace MqttBroker.Actors
 
             ReceiveAsync<ValidateDatastreamMessage>(HandleValidation);
             ReceiveAsync<ForceFullDatastreamRescan>(_ => HandleFullRescan());
-
-
+            ReceiveAsync<CreateDatastreamMessage>(HandleDatastreamCreation);
         }
 
+        private async Task HandleDatastreamCreation(CreateDatastreamMessage msg)
+        {
+            Console.WriteLine($"[Broker] Creating datastream: {msg.StreamId}");
+
+            var validSensorTypes = new[] { "Temperature", "Humidity" };
+            if (!validSensorTypes.Contains(msg.SensorType))
+            {
+                Console.WriteLine($"[Broker] Invalid sensor type: {msg.SensorType}");
+                return;
+            }
+
+            var cypher = $@"
+                MATCH (b:Building {{name: $building}})-[:HAS_ROOM]->(r:Room {{name: $room}})
+                CREATE (s:Datastream:{msg.SensorType})
+                SET s.streamId = $streamId,
+                    s.type = $sensorType
+                MERGE (r)-[:HAS_DATASTREAM]->(s)
+            ";
+
+            await using var session = _neo4jDriver.AsyncSession();
+            await session.RunAsync(cypher, new
+            {
+                streamId = msg.StreamId,
+                building = msg.Building,
+                room = msg.Room,
+                sensorType = msg.SensorType
+            });
+
+            // Immediately validate it
+            Self.Tell(new ValidateDatastreamMessage(
+                msg.StreamId,
+                new List<string> { msg.SensorType, msg.Room }));
+        }
 
         private async Task HandleValidation(ValidateDatastreamMessage msg)
         {
-            // Skip if already validated
             if (_validatedStreamIds.Contains(msg.StreamId))
             {
                 Console.WriteLine($"[Cache] Stream {msg.StreamId} already validated. Skipping.");
@@ -60,8 +89,26 @@ namespace MqttBroker.Actors
                 }
             }
 
-            // Add to cache after processing
             _validatedStreamIds.Add(msg.StreamId);
+        }
+
+        private async Task<List<string>> LoadDatastreamAndRoomLabelsAsync(string streamId)
+        {
+            await using var session = _neo4jDriver.AsyncSession();
+            var cursor = await session.RunAsync(@"
+                MATCH (d:Datastream {streamId: $streamId})
+                OPTIONAL MATCH (r:Room)-[:HAS_DATASTREAM]->(d)
+                RETURN labels(d) + r.name AS combinedLabels
+            ", new { streamId });
+
+            if (await cursor.FetchAsync())
+            {
+                return cursor.Current["combinedLabels"].As<List<object>>()
+                    .Select(label => label.ToString())
+                    .ToList();
+            }
+
+            return new List<string>();
         }
 
         private async Task ApplyVirtualTopicRelationship(string streamId, string topicName)
@@ -70,49 +117,29 @@ namespace MqttBroker.Actors
                 return;
 
             await using var session = _neo4jDriver.AsyncSession();
-            var cypher = @"
-        MATCH (d:Datastream {id: $streamId})
-        MATCH (v:VirtualTopic {name: $topicName})
-        MERGE (d)-[:PUBLISHED_AS]->(v)
-    ";
-            await session.RunAsync(cypher, new { streamId, topicName });
+            await session.RunAsync(@"
+                MATCH (d:Datastream {streamId: $streamId})
+                MATCH (v:VirtualTopic {name: $topicName})
+                MERGE (d)-[:PUBLISHED_AS]->(v)
+            ", new { streamId, topicName });
         }
 
-        private async Task<List<string>> LoadDatastreamAndRoomLabelsAsync(string streamId)
-        {
-            await using var session = _neo4jDriver.AsyncSession();
-            var cursor = await session.RunAsync(@"
-        MATCH (d:Datastream {id: $streamId})
-        OPTIONAL MATCH (r:Room)-[:HAS_DATASTREAM]->(d)
-        RETURN labels(d) + r.name AS combinedLabels
-    ", new { streamId });
-
-            if (await cursor.FetchAsync())
-            {
-                return cursor.Current["combinedLabels"].As<List<object>>()
-                             .Select(label => label.ToString())
-                             .ToList();
-            }
-
-            return new List<string>();
-        }
         private async Task HandleFullRescan()
         {
             Console.WriteLine("[Admin] Starting full datastream rescan...");
 
             await using var session = _neo4jDriver.AsyncSession();
-            var cursor = await session.RunAsync("MATCH (d:Datastream) RETURN d.id AS streamId");
+            var cursor = await session.RunAsync("MATCH (d:Datastream) RETURN d.streamId AS streamId");
 
             while (await cursor.FetchAsync())
             {
                 var streamId = cursor.Current["streamId"].As<string>();
                 Console.WriteLine($"[Admin] Rescanning datastream: {streamId}");
-                // Bypass cache and force validation
+
                 await HandleValidation(new ValidateDatastreamMessage(streamId, new List<string>()));
             }
 
             Console.WriteLine("[Admin] Full datastream rescan complete.");
         }
-
     }
 }

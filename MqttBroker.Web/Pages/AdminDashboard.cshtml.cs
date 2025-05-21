@@ -1,7 +1,6 @@
 using Akka.Actor;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using MqttBroker.Actors;
 using MqttBroker.Messages;
 using MqttBroker.Web.Services;
 using System.Collections.Generic;
@@ -61,11 +60,10 @@ namespace MqttBroker.Web.Pages
             Topics = await _metadataService.GetAllTopicsAsync();
             AvailableBuildings = await _metadataService.GetAllBuildingsAsync();
 
-            // Check if only building is selected (partial post)
             if (!string.IsNullOrEmpty(SelectedBuilding) && string.IsNullOrWhiteSpace(SensorType))
             {
                 AvailableRooms = await _metadataService.GetRoomsInBuildingAsync(SelectedBuilding);
-                return Page(); // Reload page without clearing the form
+                return Page();
             }
 
             AvailableRooms = await _metadataService.GetRoomsInBuildingAsync(SelectedBuilding);
@@ -73,45 +71,20 @@ namespace MqttBroker.Web.Pages
             if (string.IsNullOrWhiteSpace(SensorType) || string.IsNullOrWhiteSpace(SelectedRoom))
             {
                 TempData["Message"] = "Sensor type and room are required.";
-                return Page(); // Razor will repopulate using asp-for
-            }
-
-            string unit, frequency, topicName;
-            List<string> labels;
-
-            switch (SensorType)
-            {
-                case "Temperature":
-                    unit = "°C";
-                    frequency = "1s";
-                    topicName = $"TemperatureSensors_{SelectedRoom}";
-                    labels = new List<string> { "Temperature", SelectedRoom };
-                    break;
-                case "Humidity":
-                    unit = "%";
-                    frequency = "1s";
-                    topicName = $"HumiditySensors_{SelectedRoom}";
-                    labels = new List<string> { "Humidity", SelectedRoom };
-                    break;
-                default:
-                    TempData["Message"] = "Invalid sensor type selected.";
-                    return Page();
+                return Page();
             }
 
             string datastreamId = $"{SelectedBuilding}-{SelectedRoom}-{SensorType.ToLower()}";
 
-            await _metadataService.CreateDatastreamAsync(
+            // ? Send creation request to the broker
+            _validatorActorRef.Ref.Tell(new CreateDatastreamMessage(
                 datastreamId,
                 SelectedBuilding,
                 SelectedRoom,
-                SensorType);
+                SensorType
+            ));
 
-
-
-            _validatorActorRef.Ref.Tell(new ValidateDatastreamMessage(datastreamId, labels));
-            _eventNotifier.Tell(new NewTopicCreated(topicName));
-
-            TempData["Message"] = $"Datastream '{datastreamId}' created and validated.";
+            TempData["Message"] = $"Creation request for datastream '{datastreamId}' sent to broker.";
             return RedirectToPage();
         }
 
