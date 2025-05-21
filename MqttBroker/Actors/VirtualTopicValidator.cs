@@ -35,13 +35,14 @@ namespace MqttBroker.Actors
                 return;
             }
 
+            // Step 1: Write stream to DB
             var cypher = $@"
-                MATCH (b:Building {{name: $building}})-[:HAS_ROOM]->(r:Room {{name: $room}})
-                CREATE (s:Datastream:{msg.SensorType})
-                SET s.streamId = $streamId,
-                    s.type = $sensorType
-                MERGE (r)-[:HAS_DATASTREAM]->(s)
-            ";
+        MATCH (b:Building {{name: $building}})-[:HAS_ROOM]->(r:Room {{name: $room}})
+        CREATE (s:Datastream:{msg.SensorType})
+        SET s.streamId = $streamId,
+            s.type = $sensorType
+        MERGE (r)-[:HAS_DATASTREAM]->(s)
+    ";
 
             await using var session = _neo4jDriver.AsyncSession();
             await session.RunAsync(cypher, new
@@ -52,11 +53,21 @@ namespace MqttBroker.Actors
                 sensorType = msg.SensorType
             });
 
-            // Immediately validate it
-            Self.Tell(new ValidateDatastreamMessage(
-                msg.StreamId,
-                new List<string> { msg.SensorType, msg.Room }));
+            // Step 2: Match against virtual topics (with known labels only)
+            var labels = new List<string> { msg.SensorType, msg.Room };
+            var virtualTopics = await _topicProvider.GetActiveVirtualTopicsAsync();
+
+            foreach (var topic in virtualTopics)
+            {
+                if (topic.ExpectedLabels.All(labels.Contains))
+                {
+                    Console.WriteLine($"[Broker] Linking {msg.StreamId} to virtual topic {topic.Name}");
+                    await ApplyVirtualTopicRelationship(msg.StreamId, topic.Name);
+                }
+            }
+
         }
+
 
         private async Task HandleValidation(ValidateDatastreamMessage msg)
         {
