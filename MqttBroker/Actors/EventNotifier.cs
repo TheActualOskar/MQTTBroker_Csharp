@@ -40,10 +40,14 @@ namespace MqttBroker.Actors
 
         private void HandleNewTopic(string newTopic)
         {
-            var subscribers = _dbContext.Clients
-                .Include(c => c.Subscriptions)
-                .Where(c => c.Subscriptions.Any(s => newTopic.StartsWith(s.Topic)))
-                .ToList();
+            var subscribers = (
+    from client in _dbContext.Clients
+    join link in _dbContext.ClientNamedSubscriptions on client.Id equals link.ClientId
+    join namedSub in _dbContext.NamedSubscriptions on link.NamedSubscriptionId equals namedSub.Id
+    where newTopic.StartsWith(namedSub.TopicName)
+    select client
+).Distinct().ToList();
+
 
             foreach (var client in subscribers)
             {
