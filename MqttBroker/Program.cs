@@ -26,7 +26,8 @@ class Program
             .AddJsonFile("appsettings.json")
             .Build();
 
-        var eventNotifier = system.ActorOf(EventNotifier.Props(dbContext, config), "EventNotifier");
+        //Only out for Testing
+        //var eventNotifier = system.ActorOf(EventNotifier.Props(dbContext, config), "EventNotifier");
 
         //  Setup Neo4j Driver
         var neo4jDriver = GraphDatabase.Driver(
@@ -36,10 +37,15 @@ class Program
 
 
         var topicProvider = new Neo4jVirtualTopicDefinitionProvider(neo4jDriver);
+        //Only Out for testing
         var virtualTopicValidatorActor = system.ActorOf(Props.Create(() =>
+    new VirtualTopicValidatorActor(neo4jDriver, topicProvider, null)),
+    "VirtualTopicValidator");
+
+        /*var virtualTopicValidatorActor = system.ActorOf(Props.Create(() =>
             new VirtualTopicValidatorActor(neo4jDriver, topicProvider, eventNotifier)), 
             "VirtualTopicValidator");
-
+        */
         var webSocketServer = system.ActorOf(WebSocketServerActor.Props(), "WebSocketServer");
         var messageRouter = system.ActorOf(Props.Create(() => new MessageRouter()), "MessageRouter");
 

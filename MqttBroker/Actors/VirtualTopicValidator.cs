@@ -106,7 +106,7 @@ namespace MqttBroker.Actors
                 {
                     Console.WriteLine($"[Validator] Match found. Linking {msg.StreamId} to {topic.Name}");
                     await ApplyVirtualTopicRelationship(msg.StreamId, topic.Name);
-                    _eventNotifier.Tell(new NewTopicCreated(topic.Name));
+                    //_eventNotifier.Tell(new NewTopicCreated(topic.Name));
                 }
                 else
                 {

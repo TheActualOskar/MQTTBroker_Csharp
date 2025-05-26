@@ -43,8 +43,10 @@ builder.Services.AddDbContext<BrokerDbContext>(options =>
 // Actor System
 var actorSystem = ActorSystem.Create("MqttBrokerWebSystem");
 
+
+//COMMENT OUT FOR TESTING
 // Register EventNotifier Actor
-builder.Services.AddSingleton<IActorRef>(provider =>
+/*builder.Services.AddSingleton<IActorRef>(provider =>
 {
     var dbOptions = new DbContextOptionsBuilder<BrokerDbContext>()
         .UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
@@ -55,6 +57,8 @@ builder.Services.AddSingleton<IActorRef>(provider =>
 
     return actorSystem.ActorOf(EventNotifier.Props(dbContext, config), "EventNotifierWeb");
 });
+
+
 
 // Register VirtualTopicValidator Actor
 builder.Services.AddSingleton<IVirtualTopicValidatorActorRef>(provider =>
@@ -70,7 +74,22 @@ builder.Services.AddSingleton<IVirtualTopicValidatorActorRef>(provider =>
 
     return new VirtualTopicValidatorActorRef(actorRef);
 });
+*/
+//REMOVE LATER
+builder.Services.AddSingleton<IVirtualTopicValidatorActorRef>(provider =>
+{
+    var neo4jDriver = provider.GetRequiredService<IDriver>();
+    var topicProvider = new Neo4jVirtualTopicDefinitionProvider(neo4jDriver);
+    // var eventNotifier = provider.GetRequiredService<IActorRef>();
 
+    var actorRef = actorSystem.ActorOf(
+        Props.Create(() => new VirtualTopicValidatorActor(neo4jDriver, topicProvider, null)),
+        "VirtualTopicValidator"
+    );
+
+    return new VirtualTopicValidatorActorRef(actorRef);
+});
+//REMOVE LATER^^
 
 
 
