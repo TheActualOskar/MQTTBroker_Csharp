@@ -11,6 +11,11 @@ class Program
         {
             await BrokerBenchmark.RunScenarioMultipleTimes(count, repetitions: 3);
         }
+        foreach (var count in testSizes)
+        {
+            await BrokerBenchmark.RunQueryLoopScenarioMultipleTimes(count, repetitions: 3);
+        }
     }
 }
+
 
