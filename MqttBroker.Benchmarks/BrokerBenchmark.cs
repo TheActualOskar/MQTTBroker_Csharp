@@ -5,12 +5,12 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Globalization;
 using LibreHardwareMonitor.Hardware;
 using MqttBroker.Tests; // For GraphTestHelper
 
 public static class BrokerBenchmark
 {
-    // --- Virtual Topic Refresh Benchmark ---
 
     public static async Task RunScenarioMultipleTimes(int virtualTopicCount, int repetitions = 3)
     {
@@ -57,7 +57,11 @@ public static class BrokerBenchmark
         cts.Cancel();
         await monitorTask;
 
-        var line = $"{virtualTopicCount},{sw.ElapsedMilliseconds},{monitor.MaxCpu:F1},{monitor.MaxProcessMemoryMb:F1}";
+        var line = string.Format(
+            CultureInfo.InvariantCulture,
+            "{0},{1},{2:F1},{3:F1}",
+            virtualTopicCount, sw.ElapsedMilliseconds, monitor.MaxCpu, monitor.MaxProcessMemoryMb
+        );
         Console.WriteLine($"VirtualTopics: {line}");
 
         var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "refresh_benchmark_results.csv");
@@ -119,7 +123,11 @@ public static class BrokerBenchmark
         cts.Cancel();
         await monitorTask;
 
-        var line = $"{queryCount},{sw.ElapsedMilliseconds},{monitor.MaxCpu:F1},{monitor.MaxProcessMemoryMb:F1}";
+        var line = string.Format(
+            CultureInfo.InvariantCulture,
+            "{0},{1},{2:F1},{3:F1}",
+            queryCount, sw.ElapsedMilliseconds, monitor.MaxCpu, monitor.MaxProcessMemoryMb
+        );
         Console.WriteLine($"QueryLoop: {line}");
 
         var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "queryloop_benchmark_results.csv");
@@ -127,7 +135,6 @@ public static class BrokerBenchmark
             File.AppendAllText(filePath, "queryCount,timeMs,maxCpuLoad,maxProcessMemoryMb\n");
         File.AppendAllText(filePath, line + Environment.NewLine);
     }
-
 
     public class LiveMetricsMonitor
     {
