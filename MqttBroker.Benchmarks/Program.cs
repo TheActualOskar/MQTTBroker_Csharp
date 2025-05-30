@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using MqttBroker.Benchmarks;
+using System.Threading.Tasks;
 
 using System.Threading.Tasks;
 
@@ -15,6 +16,17 @@ class Program
         {
             await BrokerBenchmark.RunQueryLoopScenarioMultipleTimes(count, repetitions: 3);
         }
+
+        /*
+        try
+        {
+            var elapsed = await RealtimeDataBenchmark.RunOnce();
+            Console.WriteLine($"All messages received in {elapsed} ms.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Benchmark failed: {ex.Message}");
+        }*/
     }
 }
 
