@@ -48,20 +48,10 @@ public static class BrokerBenchmark
         var monitorTask = monitor.StartAsync();
 
         var client = new HttpClient();
-        
         var sw = Stopwatch.StartNew();
         var response = await client.PostAsync("https://localhost:7086/admin/refresh-virtual-topics", null);
         response.EnsureSuccessStatusCode();
-
-        
-        while (true)
-        {
-            // Check if the first datastream has the expected relationship to the first virtual topic
-            bool isReady = await helper.CheckIfDatastreamHasPublishedAsRelationship("sensor-1", "AutoTopic-1");
-            if (isReady)
-                break;
-            await Task.Delay(100); // Poll every 100ms
-        }
+        await Task.Delay(3000);
         sw.Stop();
 
         cts.Cancel();

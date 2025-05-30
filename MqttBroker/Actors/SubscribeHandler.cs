@@ -19,19 +19,19 @@ namespace MqttBroker.Actors
         {
             _dbContext = dbContext;
 
-            // ✅ For internal routing + DB tracking
+          
             Receive<MqttRawPacket>(packet =>
             {
                 var clientId = "test-client"; // Temporary placeholder
                 var topics = ParseSubscribePacket(packet.RawBytes);
 
-                Console.WriteLine("📬 SubscribeHandler: Client wants to subscribe to:");
+                Console.WriteLine("SubscribeHandler: Client wants to subscribe to:");
                 foreach (var topic in topics)
                 {
                     Console.WriteLine($"  - {topic}");
                 }
 
-                // 🔄 Save to PostgreSQL (Include Subscriptions to avoid null)
+                // Save to PostgreSQL (Include Subscriptions to avoid null)
                 var client = _dbContext.Clients
                     .Include(c => c.Subscriptions)
                     .FirstOrDefault(c => c.ClientId == clientId);
@@ -66,12 +66,12 @@ namespace MqttBroker.Actors
                 // _customerDb.Tell(new SubscriptionMessage(clientId, topics));
             });
 
-            // ✅ For real-time stream routing
+            // For stream routing
             Receive<InboundMqttPacket>(packet =>
             {
                 var topics = ParseSubscribePacket(packet.RawBytes);
 
-                Console.WriteLine("📬 SubscribeHandler: Client wants to subscribe to:");
+                Console.WriteLine("SubscribeHandler: Client wants to subscribe to:");
                 foreach (var topic in topics)
                 {
                     Console.WriteLine($"  - {topic}");
