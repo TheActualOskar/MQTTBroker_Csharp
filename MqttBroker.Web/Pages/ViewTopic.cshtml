@@ -33,7 +33,7 @@
 
     socket.onopen = () => {
         console.log("🔗 WebSocket connected");
-        socket.send(topic); // Tell the broker which topic to subscribe to
+        socket.send(topic);
     };
 
     socket.onmessage = (event) => {
@@ -41,7 +41,7 @@
         const p = document.createElement("p");
         p.textContent = "📨 " + event.data;
         msgBox.appendChild(p);
-        msgBox.scrollTop = msgBox.scrollHeight; // Auto-scroll
+        msgBox.scrollTop = msgBox.scrollHeight;
     };
 
     socket.onclose = () => {

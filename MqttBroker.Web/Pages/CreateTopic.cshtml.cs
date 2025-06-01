@@ -157,7 +157,6 @@ namespace MqttBroker.Web.Pages
                 return Page();
             }
 
-            // ✅ Ensure all code paths return a value
             return Page();
         }
 

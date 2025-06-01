@@ -37,7 +37,7 @@ namespace MqttBroker.Web.Pages
             if (Subscription == null)
                 return NotFound();
 
-            // Execute the Cypher query just for view purposes (note: not re-evaluation for live logic)
+            // Execute the Cypher query just for view purposes
             Streams = await _metadataService.QueryStreamsByCypherAsync(Subscription.CypherQuery);
 
             return Page();

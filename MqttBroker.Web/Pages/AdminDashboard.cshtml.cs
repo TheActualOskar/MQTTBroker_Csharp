@@ -47,7 +47,7 @@ namespace MqttBroker.Web.Pages
 
             Topics = await _metadataService.GetAllTopicsAsync();
             AvailableBuildings = await _metadataService.GetAllBuildingsAsync();
-            AvailableRooms = new(); // empty until building is selected
+            AvailableRooms = new();
             return Page();
         }
 
@@ -76,7 +76,7 @@ namespace MqttBroker.Web.Pages
 
             string datastreamId = $"{SelectedBuilding}-{SelectedRoom}-{SensorType.ToLower()}";
 
-            // ? Send creation request to the broker
+            //Send creation request to the broker
             _validatorActorRef.Ref.Tell(new CreateDatastreamMessage(
                 datastreamId,
                 SelectedBuilding,
