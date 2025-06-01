@@ -60,10 +60,9 @@ namespace MqttBroker.Actors
 
                 _dbContext.SaveChanges();
 
-                Console.WriteLine($"✅ Saved {topics.Length} subscription(s) for '{clientId}'");
+                Console.WriteLine($"Saved {topics.Length} subscription(s) for '{clientId}'");
 
-                // You can still forward this to another actor if needed
-                // _customerDb.Tell(new SubscriptionMessage(clientId, topics));
+                
             });
 
             // For stream routing

@@ -16,7 +16,6 @@ class Program
 
         var connectionString = "Host=localhost;Port=5432;Database=mqttbrokerdb;Username=postgres;Password=1234";
 
-        //  Manually create DbContextOptions
         var optionsBuilder = new DbContextOptionsBuilder<BrokerDbContext>();
         optionsBuilder.UseNpgsql(connectionString);
 

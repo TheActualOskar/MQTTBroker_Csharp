@@ -31,7 +31,7 @@ namespace MqttBroker.Actors
             var (topic, payload) = ParsePublishPacket(packet.RawBytes);
             var payloadText = Encoding.UTF8.GetString(payload);
 
-            Console.WriteLine($"📦 Received publish for topic: '{topic}'");
+            Console.WriteLine($"Received publish for topic: '{topic}'");
 
             _messageRouter.Tell(new PublishMessage(topic, payload));
             _webSocketServer.Tell(new PublishToWebSocket(topic, payloadText));
@@ -44,7 +44,7 @@ namespace MqttBroker.Actors
         {
             foreach (var vTopic in result.VirtualTopics)
             {
-                Console.WriteLine($"📨 Routing to virtual topic: {vTopic}");
+                Console.WriteLine($"Routing to virtual topic: {vTopic}");
                 _messageRouter.Tell(new PublishMessage(vTopic, result.Payload));
                 _webSocketServer.Tell(new PublishToWebSocket(vTopic, result.PayloadText));
             }

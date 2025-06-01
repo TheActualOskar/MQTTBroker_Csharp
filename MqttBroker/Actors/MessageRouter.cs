@@ -24,7 +24,7 @@ namespace MqttBroker.Actors
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"❌ Error sending to subscriber: {ex.Message}");
+                        Console.WriteLine($"Error sending to subscriber: {ex.Message}");
                     }
                 }
             });

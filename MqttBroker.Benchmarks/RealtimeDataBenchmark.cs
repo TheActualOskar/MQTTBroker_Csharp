@@ -1,4 +1,4 @@
-﻿// File: MqttBroker/Benchmarks/RealtimeDataBenchmark.cs
+﻿
 using System.Diagnostics;
 
 namespace MqttBroker.Benchmarks

@@ -82,13 +82,13 @@ namespace MqttBroker.Actors
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                     if (bytesRead == 0)
                     {
-                        Console.WriteLine("[-] Client disconnected: clean disconnect.");
+                        Console.WriteLine("Client disconnected: clean disconnect.");
                         break;
                     }
 
                     var packetData = buffer.Take(bytesRead).ToArray();
 
-                    // Diagnostic Logging
+                    
                     Console.WriteLine($"[DEBUG] Raw packet ({bytesRead} bytes): {BitConverter.ToString(packetData)}");
 
                     if (bytesRead > 1)
@@ -105,7 +105,7 @@ namespace MqttBroker.Actors
                     switch (packet.PacketType)
                     {
                         case MqttPacketType.Connect:
-                            Console.WriteLine("🔌 Received CONNECT — sending CONNACK...");
+                            Console.WriteLine("Received CONNECT — sending CONNACK...");
                             SendConnAck(stream);
                             break;
 
@@ -119,19 +119,19 @@ namespace MqttBroker.Actors
                             break;
 
                         default:
-                            Console.WriteLine($"❓ Unknown packet type: {packet.PacketType}");
+                            Console.WriteLine($"Unknown packet type: {packet.PacketType}");
                             break;
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"❌ Error with client {client.Client?.RemoteEndPoint}: {ex.Message}");
+                    Console.WriteLine($"Error with client {client.Client?.RemoteEndPoint}: {ex.Message}");
                     break;
                 }
             }
 
             client.Close();
-            Console.WriteLine($"[-] Client disconnected.");
+            Console.WriteLine($"Client disconnected.");
         }
 
 

@@ -20,14 +20,14 @@ namespace MqttBroker.Actors
             {
                 string subscribedTopic = null;
 
-                socket.OnOpen = () => Console.WriteLine($"🌐 WebSocket client connected: {socket.ConnectionInfo.ClientIpAddress}");
+                socket.OnOpen = () => Console.WriteLine($"WebSocket client connected: {socket.ConnectionInfo.ClientIpAddress}");
 
                 socket.OnClose = () =>
                 {
                     if (!string.IsNullOrEmpty(subscribedTopic) && _topicConnections.ContainsKey(subscribedTopic))
                     {
                         _topicConnections[subscribedTopic].Remove(socket);
-                        Console.WriteLine($"❌ WebSocket client unsubscribed from '{subscribedTopic}'");
+                        Console.WriteLine($"WebSocket client unsubscribed from '{subscribedTopic}'");
                     }
                 };
 
@@ -44,7 +44,7 @@ namespace MqttBroker.Actors
                             return list;
                         });
 
-                    Console.WriteLine($"🔗 WebSocket client subscribed to: {subscribedTopic}");
+                    Console.WriteLine($"WebSocket client subscribed to: {subscribedTopic}");
                 };
             });
 

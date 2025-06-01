@@ -53,7 +53,7 @@ namespace MqttBroker.Actors
             {
                 SendEmail(
                     to: client.Email,
-                    subject: "📢 New Topic Available!",
+                    subject: "New Topic Available!",
                     body: $"A new topic '{newTopic}' was added under your subscription."
                 );
             }
@@ -77,7 +77,7 @@ namespace MqttBroker.Actors
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Failed to send email to {to}: {ex.Message}");
+                Console.WriteLine($"Failed to send email to {to}: {ex.Message}");
             }
         }
         private void HandleBatchUpdate(VirtualTopicBatchUpdate update)
@@ -96,12 +96,12 @@ namespace MqttBroker.Actors
                 {
                     SendEmail(
                         to: client.Email,
-                        subject: $"🔄 Virtual Topic Updated: {topic}",
+                        subject: $"Virtual Topic Updated: {topic}",
                         body: $"The virtual topic '{topic}' was updated with {affectedStreamIds.Count} new stream(s)."
                     );
                 }
 
-                Console.WriteLine($"📬 Notified {subscribers.Count} clients about batch update for '{topic}'");
+                Console.WriteLine($"Notified {subscribers.Count} clients about batch update for '{topic}'");
             }
         }
 
